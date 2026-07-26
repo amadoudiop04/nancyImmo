@@ -51,6 +51,18 @@ Le schéma se crée tout seul au 1ᵉʳ démarrage (`hibernate.ddl-auto=update`)
    | `SPRING_DATASOURCE_PASSWORD` | mot de passe Neon |
    | `SECURITY_JWT_SECRET` | **généré automatiquement** par Render (ne pas toucher) |
    | `APP_CORS_ALLOWED_ORIGINS` | l'URL Netlify (étape 3), ex. `https://nancy-immo.netlify.app` |
+   | `APP_FRONTEND_URL` | l'URL Netlify (lien de réinitialisation dans les emails) |
+
+   Variables **optionnelles** (fonctionnalités connexion Google / emails) :
+
+   | Variable | Valeur |
+   |----------|--------|
+   | `GOOGLE_CLIENT_ID` | Client ID OAuth Google (ajoute l'URL Netlify aux origines autorisées) |
+   | `MAIL_USERNAME` / `MAIL_PASSWORD` | Adresse Gmail + *mot de passe d'application* (envoi des emails) |
+   | `MAIL_FROM` | Adresse expéditrice (défaut = `MAIL_USERNAME`) |
+
+   > Sans ces variables optionnelles : le bouton Google est masqué et le lien de réinitialisation
+   > est écrit dans les logs Render au lieu d'être envoyé par email. L'app reste fonctionnelle.
 
 4. Déploie. Note l'URL obtenue, `https://nancy-immo-api.onrender.com`.
 

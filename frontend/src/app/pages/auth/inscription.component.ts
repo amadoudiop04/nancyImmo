@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { GoogleSigninComponent } from '../../shared/google-signin.component';
 
 @Component({
   selector: 'app-inscription',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, GoogleSigninComponent],
   template: `
     <div class="nm-auth-split" style="min-height:100vh;display:grid;grid-template-columns:1fr 1fr;">
       <!-- Left brand panel -->
@@ -91,6 +92,14 @@ import { AuthService } from '../../services/auth.service';
             </button>
           </form>
 
+          <div style="display:flex;align-items:center;gap:12px;margin:20px 0;">
+            <div style="flex:1;height:1px;background:#E4E7E2;"></div>
+            <span style="font-size:12px;color:#9AA49E;">ou</span>
+            <div style="flex:1;height:1px;background:#E4E7E2;"></div>
+          </div>
+          <app-google-signin text="signup_with" (credential)="onGoogle($event)"></app-google-signin>
+          @if (googleError) { <p style="color:#C2563B;font-size:13px;margin:12px 0 0;text-align:center;">{{ googleError }}</p> }
+
           <p style="text-align:center;margin:22px 0 0;font-size:13.5px;color:#5A655F;">
             Déjà inscrit ?
             <a routerLink="/connexion" style="color:#2A9D8F;font-weight:700;text-decoration:none;">Se connecter</a>
@@ -105,8 +114,20 @@ export class InscriptionComponent {
   acceptCgu = false;
   loading = false;
   error = '';
+  googleError = '';
 
   constructor(private auth: AuthService, private router: Router) {}
+
+  /** Inscription via Google : crée (ou récupère) le compte, puis redirige selon le rôle. */
+  onGoogle(idToken: string) {
+    this.googleError = '';
+    this.auth.loginWithGoogle(idToken).subscribe({
+      next: (user) => this.router.navigate([user.role === 'LOCATAIRE' ? '/locataire' : '/bailleur']),
+      error: (err) => {
+        this.googleError = err?.error?.message || 'La connexion Google a échoué. Réessayez.';
+      }
+    });
+  }
 
   register() {
     if (!this.form.firstName || !this.form.lastName || !this.form.email || !this.form.password) {

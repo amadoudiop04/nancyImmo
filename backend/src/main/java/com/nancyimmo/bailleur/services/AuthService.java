@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,6 +28,7 @@ import com.nancyimmo.bailleur.repositories.LeaseRepository;
 import com.nancyimmo.bailleur.repositories.PaymentRepository;
 import com.nancyimmo.bailleur.repositories.PropertyRepository;
 import com.nancyimmo.bailleur.repositories.TenantRepository;
+import com.nancyimmo.bailleur.security.GoogleTokenVerifier;
 import com.nancyimmo.bailleur.security.JwtService;
 
 @Service
@@ -47,6 +49,11 @@ public class AuthService {
     private final PaymentRepository paymentRepository;
     private final DocumentRepository documentRepository;
     private final ApplicationRepository applicationRepository;
+    private final MailService mailService;
+    private final GoogleTokenVerifier googleTokenVerifier;
+
+    @Value("${app.frontend-url:http://localhost:4200}")
+    private String frontendUrl;
 
     public AuthService(LandlordRepository landlordRepository,
             PasswordEncoder passwordEncoder,
@@ -58,7 +65,9 @@ public class AuthService {
             LeaseRepository leaseRepository,
             PaymentRepository paymentRepository,
             DocumentRepository documentRepository,
-            ApplicationRepository applicationRepository) {
+            ApplicationRepository applicationRepository,
+            MailService mailService,
+            GoogleTokenVerifier googleTokenVerifier) {
         this.landlordRepository = landlordRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -70,6 +79,8 @@ public class AuthService {
         this.paymentRepository = paymentRepository;
         this.documentRepository = documentRepository;
         this.applicationRepository = applicationRepository;
+        this.mailService = mailService;
+        this.googleTokenVerifier = googleTokenVerifier;
     }
 
     public AuthResponse register(RegisterRequest req) {
@@ -147,6 +158,68 @@ public class AuthService {
         return buildAuthResponse(email, true);
     }
 
+    /**
+     * Connexion via Google. On vérifie l'ID token, puis :
+     * <ul>
+     *   <li>si l'email correspond déjà à un compte (bailleur ou locataire) : connexion avec son rôle ;</li>
+     *   <li>sinon : création d'un nouveau compte <strong>bailleur</strong>.</li>
+     * </ul>
+     * Un mot de passe aléatoire est posé sur les comptes Google (jamais communiqué) afin que tous
+     * les autres flux (/me, etc.) restent cohérents ; l'utilisateur pourra en définir un via
+     * « mot de passe oublié » s'il souhaite aussi se connecter par email.
+     */
+    @Transactional
+    public AuthResponse loginWithGoogle(String idToken) {
+        GoogleTokenVerifier.GoogleAccount g = googleTokenVerifier.verify(idToken);
+        if (!g.emailVerified()) {
+            throw new IllegalStateException("Cet email Google n'est pas vérifié.");
+        }
+        String email = g.email();
+
+        // Compte bailleur existant → connexion bailleur.
+        LandlordModel landlord = landlordRepository.findByEmail(email).orElse(null);
+        if (landlord != null) {
+            if (landlord.getPassword() == null) {
+                landlord.setPassword(randomPassword());
+                landlordRepository.save(landlord);
+            }
+            return new AuthResponse(jwtService.generateToken(email, ROLE), email, ROLE,
+                    landlord.getFirstName(), landlord.getLastName());
+        }
+
+        // Fiche locataire existante → connexion locataire (on l'active si besoin).
+        TenantModel tenant = tenantRepository.findByEmail(email).orElse(null);
+        if (tenant != null) {
+            if (tenant.getPassword() == null) {
+                tenant.setPassword(randomPassword());
+            }
+            if (tenant.getFirstName() == null || tenant.getFirstName().isBlank()) {
+                tenant.setFirstName(g.firstName());
+            }
+            if (tenant.getLastName() == null || tenant.getLastName().isBlank()) {
+                tenant.setLastName(g.lastName());
+            }
+            tenantRepository.save(tenant);
+            return new AuthResponse(jwtService.generateToken(email, ROLE_TENANT), email, ROLE_TENANT,
+                    tenant.getFirstName(), tenant.getLastName());
+        }
+
+        // Email inconnu → nouveau compte bailleur.
+        LandlordModel created = new LandlordModel();
+        created.setFirstName(g.firstName());
+        created.setLastName(g.lastName());
+        created.setEmail(email);
+        created.setPassword(randomPassword());
+        landlordRepository.save(created);
+        return new AuthResponse(jwtService.generateToken(email, ROLE), email, ROLE,
+                created.getFirstName(), created.getLastName());
+    }
+
+    /** Mot de passe non devinable pour les comptes Google (jamais transmis au client). */
+    private String randomPassword() {
+        return passwordEncoder.encode(UUID.randomUUID() + ":" + UUID.randomUUID());
+    }
+
     /** Construit la réponse d'auth en détectant le rôle (bailleur ou locataire) à partir de l'email. */
     private AuthResponse buildAuthResponse(String email, boolean withToken) {
         LandlordModel landlord = landlordRepository.findByEmail(email).orElse(null);
@@ -163,12 +236,12 @@ public class AuthService {
     }
 
     /**
-     * Demande de réinitialisation : génère un jeton à usage unique (valable 30 min) pour le
-     * compte correspondant à l'email. Retourne le jeton si le compte existe, sinon {@code null}
-     * (le contrôleur renvoie alors un message générique sans divulguer l'existence du compte).
+     * Demande de réinitialisation : si un compte correspond à l'email, génère un jeton à usage
+     * unique (valable 30 min) et envoie un email contenant le lien de réinitialisation. Ne révèle
+     * jamais si le compte existe (le contrôleur renvoie toujours un message générique).
      */
     @Transactional
-    public String forgotPassword(String rawEmail) {
+    public void forgotPassword(String rawEmail) {
         String email = rawEmail == null ? "" : rawEmail.trim().toLowerCase();
 
         LandlordModel landlord = landlordRepository.findByEmail(email).orElse(null);
@@ -177,7 +250,8 @@ public class AuthService {
             landlord.setResetToken(token);
             landlord.setResetTokenExpiry(Instant.now().plus(RESET_TOKEN_TTL_MINUTES, ChronoUnit.MINUTES));
             landlordRepository.save(landlord);
-            return token;
+            mailService.sendPasswordReset(landlord.getEmail(), landlord.getFirstName(), resetLink(token));
+            return;
         }
 
         TenantModel tenant = tenantRepository.findByEmail(email).orElse(null);
@@ -186,14 +260,19 @@ public class AuthService {
             tenant.setResetToken(token);
             tenant.setResetTokenExpiry(Instant.now().plus(RESET_TOKEN_TTL_MINUTES, ChronoUnit.MINUTES));
             tenantRepository.save(tenant);
-            return token;
+            mailService.sendPasswordReset(tenant.getEmail(), tenant.getFirstName(), resetLink(token));
         }
-
-        return null;
+        // Compte inconnu : on ne fait rien (aucune fuite d'information).
     }
 
     private String newResetToken() {
         return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    /** Construit le lien de réinitialisation pointant vers la page /reset du frontend. */
+    private String resetLink(String token) {
+        String base = frontendUrl == null ? "" : frontendUrl.replaceAll("/+$", "");
+        return base + "/reset?token=" + token;
     }
 
     /**

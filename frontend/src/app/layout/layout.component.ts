@@ -89,7 +89,7 @@ export class SiteLayoutComponent {
 
   get isAuthRoute(): boolean {
     const url = this.router.url.split('?')[0];
-    return url === '/connexion' || url === '/inscription';
+    return url === '/connexion' || url === '/inscription' || url === '/reset';
   }
 
   user = this.auth.currentUser;

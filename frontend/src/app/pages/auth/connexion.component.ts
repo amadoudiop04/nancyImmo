@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { GoogleSigninComponent } from '../../shared/google-signin.component';
 
 @Component({
   selector: 'app-connexion',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, GoogleSigninComponent],
   template: `
     <div class="nm-auth-split" style="min-height:100vh;display:grid;grid-template-columns:1fr 1fr;">
       <!-- Left brand panel -->
@@ -78,11 +79,8 @@ import { AuthService } from '../../services/auth.service';
             <span style="font-size:12px;color:#9AA49E;">ou</span>
             <div style="flex:1;height:1px;background:#E4E7E2;"></div>
           </div>
-          <button type="button" disabled title="Bientôt disponible"
-            style="width:100%;padding:13px;border:1px solid #D6DED9;border-radius:12px;background:#fff;color:#16201D;font-family:inherit;font-weight:600;font-size:14px;cursor:not-allowed;opacity:0.75;display:flex;align-items:center;justify-content:center;gap:9px;">
-            <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.2-4.7 3.2-7.9z"/><path fill="#34A853" d="M12 23c2.9 0 5.4-1 7.2-2.6l-3.6-2.7c-1 .7-2.2 1-3.6 1-2.8 0-5.2-1.9-6-4.4H2.3v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M6 14.3a6.6 6.6 0 0 1 0-4.2V7.3H2.3a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .5 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.3l3.7 2.8c.9-2.6 3.3-4.5 6-4.5z"/></svg>
-            Continuer avec Google
-          </button>
+          <app-google-signin text="continue_with" (credential)="onGoogle($event)"></app-google-signin>
+          @if (googleError) { <p style="color:#C2563B;font-size:13px;margin:12px 0 0;text-align:center;">{{ googleError }}</p> }
 
           <p style="text-align:center;margin:24px 0 0;font-size:13.5px;color:#5A655F;">
             Pas encore de compte ?
@@ -106,34 +104,30 @@ import { AuthService } from '../../services/auth.service';
                 style="background:transparent;border:none;cursor:pointer;color:#9AA49E;font-size:22px;line-height:1;padding:2px 4px;">×</button>
             </div>
 
-            @if (resetStep === 1) {
-              <p style="margin:12px 0 0;color:#5A655F;font-size:14px;line-height:1.5;">Entrez l'email de votre compte. Nous générons un lien de réinitialisation.</p>
+            @if (!resetSent) {
+              <p style="margin:12px 0 0;color:#5A655F;font-size:14px;line-height:1.5;">Entrez l'email de votre compte. Nous vous enverrons un lien pour choisir un nouveau mot de passe.</p>
               <form (ngSubmit)="requestReset()" style="margin-top:18px;">
                 <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
                 <input [(ngModel)]="resetEmail" name="resetEmail" type="email" placeholder="vous@email.fr" required
                   style="width:100%;padding:13px 14px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14.5px;outline:none;background:#fff;">
-                @if (resetMsg) { <p style="color:#2A7A6F;font-size:13px;margin:14px 0 0;">{{ resetMsg }}</p> }
                 @if (resetError) { <p style="color:#C2563B;font-size:13px;margin:14px 0 0;">{{ resetError }}</p> }
                 <button type="submit" [disabled]="resetLoading"
                   style="margin-top:18px;width:100%;padding:13px;border:none;border-radius:12px;background:#0E4F4A;color:#fff;font-family:inherit;font-weight:700;font-size:14.5px;cursor:pointer;">
-                  {{ resetLoading ? 'Vérification…' : 'Continuer' }}
+                  {{ resetLoading ? 'Envoi…' : 'Envoyer le lien' }}
                 </button>
               </form>
             } @else {
-              <p style="margin:12px 0 0;color:#5A655F;font-size:14px;line-height:1.5;">Compte trouvé. Choisissez un nouveau mot de passe (6 caractères minimum).</p>
-              <form (ngSubmit)="confirmReset()" style="margin-top:18px;">
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nouveau mot de passe</label>
-                <input [(ngModel)]="resetNewPassword" name="resetNewPassword" type="password" placeholder="••••••••" required
-                  style="width:100%;padding:13px 14px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14.5px;outline:none;background:#fff;margin-bottom:14px;">
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Confirmer le mot de passe</label>
-                <input [(ngModel)]="resetConfirm" name="resetConfirm" type="password" placeholder="••••••••" required
-                  style="width:100%;padding:13px 14px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14.5px;outline:none;background:#fff;">
-                @if (resetError) { <p style="color:#C2563B;font-size:13px;margin:14px 0 0;">{{ resetError }}</p> }
-                <button type="submit" [disabled]="resetLoading"
-                  style="margin-top:18px;width:100%;padding:13px;border:none;border-radius:12px;background:#0E4F4A;color:#fff;font-family:inherit;font-weight:700;font-size:14.5px;cursor:pointer;">
-                  {{ resetLoading ? 'Enregistrement…' : 'Réinitialiser et se connecter' }}
+              <div style="margin-top:18px;text-align:center;">
+                <div style="width:52px;height:52px;border-radius:50%;background:#E7F1EF;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" stroke="#0E4F4A" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 7l8 6 8-6" stroke="#0E4F4A" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                </div>
+                <p style="margin:0;color:#16201D;font-size:15px;font-weight:700;">Vérifiez votre boîte mail</p>
+                <p style="margin:8px 0 0;color:#5A655F;font-size:13.5px;line-height:1.55;">{{ resetMsg }}</p>
+                <button type="button" (click)="closeReset()"
+                  style="margin-top:20px;width:100%;padding:13px;border:none;border-radius:12px;background:#0E4F4A;color:#fff;font-family:inherit;font-weight:700;font-size:14.5px;cursor:pointer;">
+                  J'ai compris
                 </button>
-              </form>
+              </div>
             }
           </div>
         </div>
@@ -148,14 +142,12 @@ export class ConnexionComponent {
   rememberMe = true;
   loading = false;
   error = '';
+  googleError = '';
 
-  // Flux « mot de passe oublié »
+  // Flux « mot de passe oublié » (envoi d'un email)
   showReset = false;
-  resetStep = 1;
+  resetSent = false;
   resetEmail = '';
-  resetToken = '';
-  resetNewPassword = '';
-  resetConfirm = '';
   resetMsg = '';
   resetError = '';
   resetLoading = false;
@@ -164,11 +156,8 @@ export class ConnexionComponent {
 
   openReset() {
     this.showReset = true;
-    this.resetStep = 1;
+    this.resetSent = false;
     this.resetEmail = this.email;
-    this.resetToken = '';
-    this.resetNewPassword = '';
-    this.resetConfirm = '';
     this.resetMsg = '';
     this.resetError = '';
   }
@@ -184,16 +173,12 @@ export class ConnexionComponent {
     }
     this.resetLoading = true;
     this.resetError = '';
-    this.resetMsg = '';
     this.auth.forgotPassword(this.resetEmail.trim().toLowerCase()).subscribe({
       next: (res) => {
         this.resetLoading = false;
-        if (res.resetToken) {
-          this.resetToken = res.resetToken;
-          this.resetStep = 2;
-        } else {
-          this.resetMsg = res.message || "Si un compte existe, un lien a été généré.";
-        }
+        this.resetSent = true;
+        this.resetMsg = res.message
+          || "Si un compte existe pour cet email, un lien de réinitialisation vient d'être envoyé.";
       },
       error: () => {
         this.resetLoading = false;
@@ -202,26 +187,20 @@ export class ConnexionComponent {
     });
   }
 
-  confirmReset() {
-    if (!this.resetNewPassword || this.resetNewPassword.length < 6) {
-      this.resetError = 'Mot de passe trop court (6 caractères minimum).';
-      return;
-    }
-    if (this.resetNewPassword !== this.resetConfirm) {
-      this.resetError = 'Les deux mots de passe ne correspondent pas.';
-      return;
-    }
-    this.resetLoading = true;
-    this.resetError = '';
-    this.auth.resetPassword(this.resetToken, this.resetNewPassword).subscribe({
+  /** Connexion via Google : échange l'ID token contre un JWT, puis redirige selon le rôle. */
+  onGoogle(idToken: string) {
+    this.googleError = '';
+    this.auth.loginWithGoogle(idToken).subscribe({
       next: (user) => {
-        this.resetLoading = false;
-        this.showReset = false;
-        this.router.navigate([user.role === 'LOCATAIRE' ? '/locataire' : '/bailleur']);
+        const redirect = this.route.snapshot.queryParamMap.get('redirect');
+        if (redirect) {
+          this.router.navigateByUrl(redirect);
+        } else {
+          this.router.navigate([user.role === 'LOCATAIRE' ? '/locataire' : '/bailleur']);
+        }
       },
       error: (err) => {
-        this.resetLoading = false;
-        this.resetError = err?.error?.message || 'Lien invalide ou expiré. Refaites une demande.';
+        this.googleError = err?.error?.message || 'La connexion Google a échoué. Réessayez.';
       }
     });
   }

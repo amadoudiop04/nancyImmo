@@ -14,12 +14,14 @@ import { RechercheComponent } from './pages/recherche/recherche.component';
 import { ProfilComponent } from './pages/profil/profil.component';
 import { ConnexionComponent } from './pages/auth/connexion.component';
 import { InscriptionComponent } from './pages/auth/inscription.component';
+import { ResetComponent } from './pages/auth/reset.component';
 import { roleGuard } from './services/auth.guard';
 
 export const routes: Routes = [
   { path: '', component: AccueilComponent },
   { path: 'connexion', component: ConnexionComponent },
   { path: 'inscription', component: InscriptionComponent },
+  { path: 'reset', component: ResetComponent },
   { path: 'recherche', component: RechercheComponent },
   {
     path: 'bailleur',

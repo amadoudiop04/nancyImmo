@@ -22,3 +22,16 @@ services:
       # URL du frontend Netlify (pour CORS). Ex : https://nancy-immo.netlify.app
       - key: APP_CORS_ALLOWED_ORIGINS
         sync: false
+      # URL du frontend (liens de réinitialisation dans les emails). Ex : https://nancy-immo.netlify.app
+      - key: APP_FRONTEND_URL
+        sync: false
+      # --- Optionnel : connexion Google (laisser vide pour désactiver) ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # --- Optionnel : envoi des emails de réinitialisation (Gmail app password) ---
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false

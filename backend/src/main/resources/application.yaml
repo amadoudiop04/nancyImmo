@@ -7,8 +7,14 @@ server:
 app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:4200}
-  # URL du frontend (pour les redirections Stripe success/cancel).
+  # URL du frontend (redirections Stripe + lien de réinitialisation par email).
   frontend-url: ${APP_FRONTEND_URL:http://localhost:4200}
+  # Expéditeur des emails. Si vide, aucun email n'est envoyé (le lien est écrit dans les logs).
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
+  # Connexion Google : Client ID OAuth 2.0 (console Google Cloud). Vide = bouton Google masqué.
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
 
 # Paiements Stripe. Renseigner STRIPE_SECRET_KEY (clé test sk_test_…).
 # Le webhook (optionnel) nécessite STRIPE_WEBHOOK_SECRET (whsec_…).
@@ -39,3 +45,19 @@ spring:
       # Pièces justificatives uploadées (pièce d'identité, etc.)
       max-file-size: 10MB
       max-request-size: 12MB
+  # SMTP pour l'envoi des emails de réinitialisation.
+  # Gmail : générer un « mot de passe d'application » (compte avec 2FA activée).
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
