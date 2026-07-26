@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, shareReplay, tap } from 'rxjs';
 
 export interface AuthUser {
   token?: string;
@@ -20,6 +20,9 @@ export class AuthService {
   // Signal réactif de l'utilisateur courant.
   readonly currentUser = signal<AuthUser | null>(this.readStoredUser());
 
+  // Cache de la configuration publique (Client ID Google).
+  private config$?: Observable<{ googleClientId: string }>;
+
   constructor(private http: HttpClient) {}
 
   login(email: string, password: string): Observable<AuthUser> {
@@ -36,9 +39,26 @@ export class AuthService {
     );
   }
 
-  /** Demande un lien de réinitialisation. En mode démo, le jeton est renvoyé dans la réponse. */
-  forgotPassword(email: string): Observable<{ message: string; resetToken?: string }> {
-    return this.http.post<{ message: string; resetToken?: string }>(`${this.api}/forgot-password`, { email });
+  /** Connexion / inscription via Google (ID token vérifié côté serveur). Persiste le JWT. */
+  loginWithGoogle(idToken: string): Observable<AuthUser> {
+    return this.http.post<AuthUser>(`${this.api}/google`, { idToken }).pipe(
+      tap(res => this.persist(res))
+    );
+  }
+
+  /** Configuration publique (Client ID Google). Mise en cache après le 1er appel. */
+  getAuthConfig(): Observable<{ googleClientId: string }> {
+    if (!this.config$) {
+      this.config$ = this.http.get<{ googleClientId: string }>(`${this.api}/config`).pipe(
+        shareReplay(1)
+      );
+    }
+    return this.config$;
+  }
+
+  /** Demande l'envoi d'un email de réinitialisation. Message générique (pas de fuite d'info). */
+  forgotPassword(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.api}/forgot-password`, { email });
   }
 
   /** Réinitialise le mot de passe via le jeton, puis connecte l'utilisateur (persiste le JWT). */

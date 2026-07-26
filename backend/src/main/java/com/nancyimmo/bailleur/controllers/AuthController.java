@@ -1,8 +1,8 @@
 package com.nancyimmo.bailleur.controllers;
 
-import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.nancyimmo.bailleur.dto.auth.AuthResponse;
 import com.nancyimmo.bailleur.dto.auth.ForgotPasswordRequest;
+import com.nancyimmo.bailleur.dto.auth.GoogleLoginRequest;
 import com.nancyimmo.bailleur.dto.auth.LoginRequest;
 import com.nancyimmo.bailleur.dto.auth.RegisterRequest;
 import com.nancyimmo.bailleur.dto.auth.ResetPasswordRequest;
@@ -26,8 +27,17 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @Value("${app.google.client-id:}")
+    private String googleClientId;
+
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+
+    /** Configuration publique consommée par le frontend (ex. Client ID Google pour le bouton). */
+    @GetMapping("/config")
+    public ResponseEntity<?> config() {
+        return ResponseEntity.ok(Map.of("googleClientId", googleClientId == null ? "" : googleClientId));
     }
 
     @PostMapping("/register")
@@ -49,20 +59,26 @@ public class AuthController {
         }
     }
 
+    /** Connexion / inscription via Google (ID token vérifié côté serveur). */
+    @PostMapping("/google")
+    public ResponseEntity<?> google(@RequestBody GoogleLoginRequest request) {
+        try {
+            return ResponseEntity.ok(authService.loginWithGoogle(request.getIdToken()));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+        }
+    }
+
     /**
-     * Demande de réinitialisation de mot de passe. En mode démo (pas d'envoi d'email), le jeton
-     * est renvoyé directement dans la réponse ({@code resetToken}) pour permettre la suite du flux.
-     * Le message reste générique afin de ne pas divulguer l'existence d'un compte.
+     * Demande de réinitialisation de mot de passe : envoie un email contenant le lien de
+     * réinitialisation si un compte existe. Le message reste générique afin de ne pas divulguer
+     * l'existence d'un compte.
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        String token = authService.forgotPassword(request.getEmail());
-        Map<String, Object> body = new HashMap<>();
-        body.put("message", "Si un compte existe pour cet email, un lien de réinitialisation a été généré.");
-        if (token != null) {
-            body.put("resetToken", token);
-        }
-        return ResponseEntity.ok(body);
+        authService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(Map.of("message",
+                "Si un compte existe pour cet email, un lien de réinitialisation vient d'être envoyé."));
     }
 
     /** Réinitialise le mot de passe à partir d'un jeton valide et connecte directement l'utilisateur. */
