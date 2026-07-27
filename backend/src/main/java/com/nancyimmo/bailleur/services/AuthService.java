@@ -1,5 +1,6 @@
 package com.nancyimmo.bailleur.services;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -37,6 +38,9 @@ public class AuthService {
     private static final String ROLE = "BAILLEUR";
     private static final String ROLE_TENANT = "LOCATAIRE";
     private static final long RESET_TOKEN_TTL_MINUTES = 30;
+
+    /** BCrypt refuse toute entrée de plus de 72 octets (limite de l'algorithme). */
+    private static final int MAX_PASSWORD_BYTES = 72;
 
     private final LandlordRepository landlordRepository;
     private final PasswordEncoder passwordEncoder;
@@ -88,6 +92,7 @@ public class AuthService {
                 || req.getFirstName() == null || req.getLastName() == null) {
             throw new IllegalArgumentException("Champs obligatoires manquants.");
         }
+        requirePasswordWithinBcryptLimit(req.getPassword());
         String email = req.getEmail().trim().toLowerCase();
         boolean wantsTenant = ROLE_TENANT.equalsIgnoreCase(req.getRole());
 
@@ -215,9 +220,28 @@ public class AuthService {
                 created.getFirstName(), created.getLastName());
     }
 
-    /** Mot de passe non devinable pour les comptes Google (jamais transmis au client). */
+    /**
+     * Vérifie que le mot de passe tient dans la limite de BCrypt.
+     *
+     * <p>La limite porte sur les OCTETS UTF-8, pas sur les caractères : un mot de passe accentué
+     * peut faire moins de 72 caractères et dépasser quand même. Sans ce contrôle, BCrypt lève une
+     * {@code IllegalArgumentException} technique remontée telle quelle à l'utilisateur.
+     */
+    private static void requirePasswordWithinBcryptLimit(String password) {
+        if (password.getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
+            throw new IllegalArgumentException(
+                    "Mot de passe trop long (72 octets maximum ; les caractères accentués en comptent 2).");
+        }
+    }
+
+    /**
+     * Mot de passe non devinable pour les comptes Google (jamais transmis au client).
+     *
+     * <p>Un seul UUID (36 octets, 122 bits d'entropie) : deux UUID concaténés dépassaient d'un
+     * octet la limite de 72 imposée par BCrypt, qui rejetait alors toute connexion Google.
+     */
     private String randomPassword() {
-        return passwordEncoder.encode(UUID.randomUUID() + ":" + UUID.randomUUID());
+        return passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     /** Construit la réponse d'auth en détectant le rôle (bailleur ou locataire) à partir de l'email. */
@@ -284,6 +308,7 @@ public class AuthService {
         if (token == null || token.isBlank() || newPassword == null || newPassword.length() < 6) {
             throw new IllegalArgumentException("Lien invalide ou mot de passe trop court (6 caractères minimum).");
         }
+        requirePasswordWithinBcryptLimit(newPassword);
 
         LandlordModel landlord = landlordRepository.findByResetToken(token).orElse(null);
         if (landlord != null) {
