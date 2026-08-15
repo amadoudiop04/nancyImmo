@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ApiService, Application } from '../../../services/api.service';
 import { ToastService } from '../../../services/toast.service';
 
@@ -90,6 +90,9 @@ import { ToastService } from '../../../services/toast.service';
   `
 })
 export class CandidaturesComponent implements OnInit {
+  private api = inject(ApiService);
+  private toast = inject(ToastService);
+
   applications: Application[] = [];
   loading = true;
   activeTab = 'ALL';
@@ -103,8 +106,6 @@ export class CandidaturesComponent implements OnInit {
   ];
 
   private colors = ['#0E4F4A', '#2A9D8F', '#264653', '#E76F51', '#E9C46A'];
-
-  constructor(private api: ApiService, private toast: ToastService) {}
 
   ngOnInit() { this.load(); }
 

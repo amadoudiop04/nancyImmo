@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -46,9 +46,9 @@ import { AuthService } from '../../services/auth.service';
             <p style="margin:8px 0 0;color:#5A655F;font-size:14.5px;">Choisissez un nouveau mot de passe (6 caractères minimum).</p>
 
             <form (ngSubmit)="submit()" style="margin-top:24px;">
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nouveau mot de passe</label>
+              <label for="reset-new-password" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nouveau mot de passe</label>
               <div style="position:relative;margin-bottom:16px;">
-                <input [(ngModel)]="newPassword" name="newPassword" [type]="show ? 'text' : 'password'" placeholder="••••••••" required
+                <input id="reset-new-password" [(ngModel)]="newPassword" name="newPassword" [type]="show ? 'text' : 'password'" placeholder="••••••••" required
                   style="width:100%;padding:13px 44px 13px 14px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14.5px;outline:none;background:#fff;">
                 <button type="button" (click)="show = !show"
                   [attr.aria-label]="show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
@@ -61,8 +61,8 @@ import { AuthService } from '../../services/auth.service';
                 </button>
               </div>
 
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Confirmer le mot de passe</label>
-              <input [(ngModel)]="confirm" name="confirm" [type]="show ? 'text' : 'password'" placeholder="••••••••" required
+              <label for="reset-confirm-password" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Confirmer le mot de passe</label>
+              <input id="reset-confirm-password" [(ngModel)]="confirm" name="confirm" [type]="show ? 'text' : 'password'" placeholder="••••••••" required
                 style="width:100%;padding:13px 14px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14.5px;outline:none;background:#fff;">
 
               @if (error) { <p style="color:#C2563B;font-size:13px;margin:14px 0 0;">{{ error }}</p> }
@@ -83,14 +83,16 @@ import { AuthService } from '../../services/auth.service';
   `
 })
 export class ResetComponent implements OnInit {
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
   token = '';
   newPassword = '';
   confirm = '';
   show = false;
   loading = false;
   error = '';
-
-  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
     this.token = this.route.snapshot.queryParamMap.get('token') ?? '';

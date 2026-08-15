@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
@@ -70,9 +70,9 @@ export interface Application {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly api = '/api';
+  private http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {}
+  private readonly api = '/api';
 
   // Buildings
   getBuildings(): Observable<Building[]> { return this.http.get<Building[]>(`${this.api}/buildings`); }

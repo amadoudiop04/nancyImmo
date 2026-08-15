@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiService, Payment, PaymentStats, PropertyDetails, Tenant } from '../../../services/api.service';
+import { ApiService, Payment, PaymentStats, PropertyDetails } from '../../../services/api.service';
 import { ToastService } from '../../../services/toast.service';
 
 @Component({
@@ -38,8 +38,8 @@ import { ToastService } from '../../../services/toast.service';
         @if (showForm) {
           <div class="nm-form" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-top:16px;">
             <div>
-              <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Bien</label>
-              <select [(ngModel)]="newPay.leaseId" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;background:#fff;">
+              <label for="payment-lease" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Bien</label>
+              <select id="payment-lease" [(ngModel)]="newPay.leaseId" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;background:#fff;">
                 <option [value]="undefined">— Sélectionner —</option>
                 @for (p of properties; track p.id) {
                   @if (p.lease) {
@@ -49,16 +49,16 @@ import { ToastService } from '../../../services/toast.service';
               </select>
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Période</label>
-              <input type="date" [(ngModel)]="newPay.period" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
+              <label for="payment-period" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Période</label>
+              <input id="payment-period" type="date" [(ngModel)]="newPay.period" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Montant (€)</label>
-              <input type="number" [(ngModel)]="newPay.amount" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
+              <label for="payment-amount" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Montant (€)</label>
+              <input id="payment-amount" type="number" [(ngModel)]="newPay.amount" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
             </div>
             <div>
-              <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Statut</label>
-              <select [(ngModel)]="newPay.status" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;background:#fff;">
+              <label for="payment-status" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Statut</label>
+              <select id="payment-status" [(ngModel)]="newPay.status" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;background:#fff;">
                 <option value="PAID">Payé</option>
                 <option value="PENDING">En attente</option>
                 <option value="LATE">En retard</option>
@@ -100,13 +100,14 @@ import { ToastService } from '../../../services/toast.service';
   `
 })
 export class PaiementsComponent implements OnInit {
+  private api = inject(ApiService);
+  private toast = inject(ToastService);
+
   payments: Payment[] = [];
   payStats: PaymentStats | null = null;
   properties: PropertyDetails[] = [];
   showForm = false;
-  newPay: any = { status: 'PAID', amount: 0 };
-
-  constructor(private api: ApiService, private toast: ToastService) {}
+  newPay: Partial<Payment> = { status: 'PAID', amount: 0 };
 
   ngOnInit() {
     this.load();
@@ -119,7 +120,7 @@ export class PaiementsComponent implements OnInit {
   }
 
   createPayment() {
-    this.api.createPayment(this.newPay).subscribe({
+    this.api.createPayment(this.newPay as Omit<Payment, 'id'>).subscribe({
       next: () => {
         this.showForm = false;
         this.newPay = { status: 'PAID', amount: 0 };

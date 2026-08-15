@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiService, Property, Building } from '../../../services/api.service';
+import { ApiService, Property, PropertyDetails, Building } from '../../../services/api.service';
 import { ToastService } from '../../../services/toast.service';
 
 @Component({
@@ -27,28 +27,28 @@ import { ToastService } from '../../../services/toast.service';
           <h2 style="margin:0 0 18px;font-size:16px;font-weight:700;">{{ editingId ? 'Modifier le bien' : 'Nouveau bien' }}</h2>
           <div class="nm-form" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom du bien</label>
-              <input [(ngModel)]="newProp.name" placeholder="Ex: Appartement T3 Foch" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
+              <label for="prop-name" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom du bien</label>
+              <input id="prop-name" [(ngModel)]="newProp.name" placeholder="Ex: Appartement T3 Foch" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
             </div>
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Type</label>
-              <input [(ngModel)]="newProp.kind" placeholder="Ex: T3, Studio, Maison" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
+              <label for="prop-kind" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Type</label>
+              <input id="prop-kind" [(ngModel)]="newProp.kind" placeholder="Ex: T3, Studio, Maison" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
             </div>
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Surface</label>
-              <input [(ngModel)]="newProp.size" placeholder="Ex: 65 m²" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
+              <label for="prop-size" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Surface</label>
+              <input id="prop-size" [(ngModel)]="newProp.size" placeholder="Ex: 65 m²" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
             </div>
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Loyer demandé (€/mois)</label>
-              <input [(ngModel)]="newProp.rent" type="number" placeholder="Ex: 750" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
+              <label for="prop-rent" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Loyer demandé (€/mois)</label>
+              <input id="prop-rent" [(ngModel)]="newProp.rent" type="number" placeholder="Ex: 750" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
             </div>
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Adresse / Localisation</label>
-              <input [(ngModel)]="newProp.location" placeholder="Ex: 12 Av. Foch, Nancy" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
+              <label for="prop-location" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Adresse / Localisation</label>
+              <input id="prop-location" [(ngModel)]="newProp.location" placeholder="Ex: 12 Av. Foch, Nancy" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
             </div>
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Immeuble</label>
-              <select [(ngModel)]="newProp.buildingId" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;background:#fff;">
+              <label for="prop-building" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Immeuble</label>
+              <select id="prop-building" [(ngModel)]="newProp.buildingId" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;background:#fff;">
                 <option [value]="undefined">— Aucun —</option>
                 @for (b of buildings; track b.id) {
                   <option [value]="b.id">{{ b.name }}</option>
@@ -56,16 +56,16 @@ import { ToastService } from '../../../services/toast.service';
               </select>
             </div>
             <div style="grid-column:1/3;">
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Photo du bien (URL)</label>
-              <input [(ngModel)]="newProp.imageUrl" placeholder="https://… (lien vers une image)"
+              <label for="prop-image" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Photo du bien (URL)</label>
+              <input id="prop-image" [(ngModel)]="newProp.imageUrl" placeholder="https://… (lien vers une image)"
                 style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
               @if (newProp.imageUrl) {
                 <img [src]="newProp.imageUrl" alt="aperçu" style="margin-top:10px;width:100%;max-height:160px;object-fit:cover;border-radius:10px;border:1px solid #E4E7E2;">
               }
             </div>
             <div style="grid-column:1/3;">
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Description</label>
-              <textarea [(ngModel)]="newProp.description" rows="3" placeholder="Appartement lumineux, balcon, parking…"
+              <label for="prop-description" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Description</label>
+              <textarea id="prop-description" [(ngModel)]="newProp.description" rows="3" placeholder="Appartement lumineux, balcon, parking…"
                 style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;resize:vertical;"></textarea>
             </div>
           </div>
@@ -150,7 +150,10 @@ import { ToastService } from '../../../services/toast.service';
   `
 })
 export class BiensComponent implements OnInit {
-  properties: any[] = [];
+  private api = inject(ApiService);
+  private toast = inject(ToastService);
+
+  properties: PropertyDetails[] = [];
   buildings: Building[] = [];
   loading = true;
   showForm = false;
@@ -158,8 +161,6 @@ export class BiensComponent implements OnInit {
   removingId: number | null = null;
   editingId: number | null = null;
   newProp: Partial<Property> = { name: '', kind: '', size: '', location: '' };
-
-  constructor(private api: ApiService, private toast: ToastService) {}
 
   private emptyProp(): Partial<Property> {
     return { name: '', kind: '', size: '', location: '', rent: undefined, description: '', imageUrl: '', buildingId: undefined };
@@ -172,7 +173,7 @@ export class BiensComponent implements OnInit {
     this.showForm = !this.showForm;
   }
 
-  startEdit(p: any) {
+  startEdit(p: PropertyDetails) {
     this.editingId = p.id;
     this.error = '';
     this.newProp = {
@@ -202,7 +203,7 @@ export class BiensComponent implements OnInit {
         error: () => { this.error = 'Erreur lors de la modification.'; this.toast.error('Impossible de modifier le bien'); }
       });
     } else {
-      this.api.createProperty(this.newProp as any).subscribe({
+      this.api.createProperty(this.newProp as Omit<Property, 'id'>).subscribe({
         next: () => { this.cancelForm(); this.toast.success('Bien ajouté'); this.load(); },
         error: () => { this.error = 'Erreur lors de la création.'; this.toast.error('Impossible d\'ajouter le bien'); }
       });
@@ -239,7 +240,7 @@ export class BiensComponent implements OnInit {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: currency ?? 'EUR', maximumFractionDigits: 0 }).format(amount);
   }
 
-  displayRent(p: any): string {
+  displayRent(p: PropertyDetails): string {
     const amount = p.lease?.rentAmount ?? p.rent;
     if (!amount) return '—';
     return this.formatRent(amount, p.lease?.currency ?? 'EUR') + '/mois';

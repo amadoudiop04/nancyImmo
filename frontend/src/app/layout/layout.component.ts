@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { ToastComponent } from '../shared/toast.component';
@@ -85,7 +85,9 @@ import { CookieConsentComponent } from '../shared/cookie-consent.component';
   `
 })
 export class SiteLayoutComponent {
-  constructor(private router: Router, private auth: AuthService) {}
+  private router = inject(Router);
+  private auth = inject(AuthService);
+
 
   get isAuthRoute(): boolean {
     const url = this.router.url.split('?')[0];

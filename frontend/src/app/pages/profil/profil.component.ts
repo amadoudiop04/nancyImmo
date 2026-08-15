@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService, Landlord, PropertyDetails } from '../../services/api.service';
@@ -53,28 +53,28 @@ import { ToastService } from '../../services/toast.service';
               <div style="font-size:16px;font-weight:700;margin-bottom:18px;">Informations personnelles</div>
               <div class="nm-form" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Prénom</label>
-                  <input [(ngModel)]="landlord.firstName" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
+                  <label for="profil-firstname" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Prénom</label>
+                  <input id="profil-firstname" [(ngModel)]="landlord.firstName" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
                 </div>
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom</label>
-                  <input [(ngModel)]="landlord.lastName" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
+                  <label for="profil-lastname" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom</label>
+                  <input id="profil-lastname" [(ngModel)]="landlord.lastName" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
                 </div>
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
-                  <input [(ngModel)]="landlord.email" type="email" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
+                  <label for="profil-email" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
+                  <input id="profil-email" [(ngModel)]="landlord.email" type="email" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
                 </div>
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Téléphone</label>
-                  <input [(ngModel)]="landlord.phone" type="tel" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
+                  <label for="profil-phone" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Téléphone</label>
+                  <input id="profil-phone" [(ngModel)]="landlord.phone" type="tel" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
                 </div>
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Ville</label>
-                  <input [(ngModel)]="landlord.city" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
+                  <label for="profil-city" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Ville</label>
+                  <input id="profil-city" [(ngModel)]="landlord.city" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
                 </div>
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Code postal</label>
-                  <input [(ngModel)]="landlord.zipCode" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
+                  <label for="profil-zipcode" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Code postal</label>
+                  <input id="profil-zipcode" [(ngModel)]="landlord.zipCode" style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;color:#16201D;background:#fff;outline:none;">
                 </div>
               </div>
             </div>
@@ -90,12 +90,13 @@ import { ToastService } from '../../services/toast.service';
                       <div style="font-size:14px;font-weight:600;">{{ n.title }}</div>
                       <div style="font-size:12.5px;color:#8A938E;">{{ n.sub }}</div>
                     </div>
-                    <div (click)="n.on = !n.on"
+                    <button type="button" role="switch" (click)="n.on = !n.on"
+                      [attr.aria-checked]="n.on" [attr.aria-label]="n.title"
                       [style.background]="n.on ? '#2A9D8F' : '#D6DED9'"
-                      style="width:44px;height:25px;border-radius:999px;position:relative;cursor:pointer;transition:background .15s;">
+                      style="width:44px;height:25px;border:none;padding:0;border-radius:999px;position:relative;cursor:pointer;transition:background .15s;flex:none;">
                       <div [style.left]="n.on ? 'auto' : '3px'" [style.right]="n.on ? '3px' : 'auto'"
                         style="position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;"></div>
-                    </div>
+                    </button>
                   </div>
                 }
               </div>
@@ -153,6 +154,11 @@ import { ToastService } from '../../services/toast.service';
   `
 })
 export class ProfilComponent implements OnInit {
+  private api = inject(ApiService);
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private toast = inject(ToastService);
+
   landlord: Landlord | null = null;
   loading = true;
   saving = false;
@@ -166,8 +172,6 @@ export class ProfilComponent implements OnInit {
     { key: 'late', title: 'Retards de paiement', sub: 'Relance automatique des locataires', on: true },
     { key: 'applications', title: 'Nouvelles candidatures', sub: 'Dossiers déposés sur vos biens', on: false },
   ];
-
-  constructor(private api: ApiService, private auth: AuthService, private router: Router, private toast: ToastService) {}
 
   ngOnInit() {
     // Identifie le bailleur via la session sécurisée (JWT) : /api/auth/me.

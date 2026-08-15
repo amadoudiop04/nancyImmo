@@ -1,13 +1,25 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
+
 import { FormsModule } from '@angular/forms';
-import { ApiService, Tenant, PropertyDetails, TenantPaymentHistory } from '../../../services/api.service';
+import { ApiService, Tenant, Lease, PropertyDetails, TenantPaymentHistory } from '../../../services/api.service';
 import { ToastService } from '../../../services/toast.service';
+
+/**
+ * Formulaire locataire : les champs du bail (bien, loyer, date de début) sont saisis
+ * en même temps que le locataire, d'où les propriétés supplémentaires. L'index
+ * signature permet la saisie générique via `tenantFields` dans le template.
+ */
+interface TenantForm extends Partial<Tenant> {
+  propertyId?: number | null;
+  rentAmount?: number | null;
+  startDate?: string | null;
+  [key: string]: unknown;
+}
 
 @Component({
   selector: 'app-locataires',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   template: `
     <div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;">
@@ -28,8 +40,8 @@ import { ToastService } from '../../../services/toast.service';
           <div class="nm-form" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             @for (f of tenantFields; track f.key) {
               <div>
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">{{ f.label }}</label>
-                <input [(ngModel)]="newTenant[f.key]" [placeholder]="f.placeholder" [type]="f.type ?? 'text'"
+                <label [attr.for]="'tenant-' + f.key" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">{{ f.label }}</label>
+                <input [id]="'tenant-' + f.key" [(ngModel)]="newTenant[f.key]" [placeholder]="f.placeholder" [type]="f.type ?? 'text'"
                   style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
               </div>
             }
@@ -43,8 +55,8 @@ import { ToastService } from '../../../services/toast.service';
               </div>
               <div class="nm-form" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;">
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Bien</label>
-                  <select [(ngModel)]="newTenant.propertyId" (ngModelChange)="onPropertyChange($event)"
+                  <label for="tenant-property" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Bien</label>
+                  <select id="tenant-property" [(ngModel)]="newTenant.propertyId" (ngModelChange)="onPropertyChange($event)"
                     style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;background:#fff;">
                     <option [ngValue]="null">— Aucun bien —</option>
                     @for (p of availableProperties; track p.id) {
@@ -53,13 +65,13 @@ import { ToastService } from '../../../services/toast.service';
                   </select>
                 </div>
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Loyer (€/mois)</label>
-                  <input [(ngModel)]="newTenant.rentAmount" type="number" placeholder="750" [disabled]="!newTenant.propertyId"
+                  <label for="tenant-rent" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Loyer (€/mois)</label>
+                  <input id="tenant-rent" [(ngModel)]="newTenant.rentAmount" type="number" placeholder="750" [disabled]="!newTenant.propertyId"
                     style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
                 </div>
                 <div>
-                  <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Début du bail</label>
-                  <input [(ngModel)]="newTenant.startDate" type="date" [disabled]="!newTenant.propertyId"
+                  <label for="tenant-lease-start" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Début du bail</label>
+                  <input id="tenant-lease-start" [(ngModel)]="newTenant.startDate" type="date" [disabled]="!newTenant.propertyId"
                     style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
                 </div>
               </div>
@@ -127,9 +139,9 @@ import { ToastService } from '../../../services/toast.service';
 
       <!-- Historique de paiement annuel -->
       @if (historyTenant) {
-        <div (click)="closeHistory()"
+        <div (click)="onHistoryBackdropClick($event)" role="presentation"
           style="position:fixed;inset:0;background:rgba(22,32,29,0.55);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;">
-          <div (click)="$event.stopPropagation()"
+          <div role="dialog" aria-modal="true"
             style="background:#fff;border-radius:18px;max-width:760px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 30px 70px rgba(0,0,0,0.3);">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #EEF1ED;">
               <div>
@@ -196,13 +208,16 @@ import { ToastService } from '../../../services/toast.service';
   `
 })
 export class LocatairesComponent implements OnInit {
+  private api = inject(ApiService);
+  private toast = inject(ToastService);
+
   tenants: Tenant[] = [];
   properties: PropertyDetails[] = [];
   availableProperties: PropertyDetails[] = [];
   loading = true;
   showForm = false;
   error = '';
-  newTenant: any = {};
+  newTenant: TenantForm = {};
 
   tenantFields = [
     { key: 'firstName', label: 'Prénom', placeholder: 'Thomas' },
@@ -225,8 +240,6 @@ export class LocatairesComponent implements OnInit {
   historyYear = new Date().getFullYear();
   historyLoading = false;
 
-  constructor(private api: ApiService, private toast: ToastService) {}
-
   openHistory(t: Tenant) {
     this.historyTenant = t;
     this.historyYear = new Date().getFullYear();
@@ -236,6 +249,16 @@ export class LocatairesComponent implements OnInit {
   closeHistory() {
     this.historyTenant = null;
     this.history = null;
+  }
+
+  /** Ferme la modale au clic sur le fond, sans intercepter les clics du panneau. */
+  onHistoryBackdropClick(event: MouseEvent) {
+    if (event.target === event.currentTarget) this.closeHistory();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    if (this.historyTenant) this.closeHistory();
   }
 
   changeYear(delta: number) {
@@ -336,10 +359,10 @@ export class LocatairesComponent implements OnInit {
       const propertyId = this.newTenant.propertyId;
       const rentAmount = this.newTenant.rentAmount;
       const startDate = this.newTenant.startDate;
-      this.api.createTenant(this.newTenant).subscribe({
+      this.api.createTenant(this.newTenant as Omit<Tenant, 'id'>).subscribe({
         next: (tenant) => {
           if (propertyId) {
-            this.attachToProperty(tenant.id, propertyId, rentAmount, startDate);
+            this.attachToProperty(tenant.id, propertyId, rentAmount ?? null, startDate ?? null);
           } else {
             this.cancelForm(); this.toast.success('Locataire ajouté'); this.load();
           }
@@ -356,7 +379,7 @@ export class LocatairesComponent implements OnInit {
       rentAmount: rentAmount ?? 0,
       currency: 'EUR',
       startDate: startDate ?? new Date().toISOString().slice(0, 10),
-    } as any).subscribe({
+    } as Omit<Lease, 'id'>).subscribe({
       next: () => {
         this.cancelForm();
         this.toast.success('Locataire ajouté et attribué au bien');
