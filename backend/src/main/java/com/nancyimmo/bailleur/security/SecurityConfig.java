@@ -44,6 +44,9 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints publics
+                        // /swagger-ui.html redirige vers /swagger-ui/index.html : les deux
+                        // doivent être ouverts, le pattern /swagger-ui/** ne couvrant pas le .html.
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/", "/error", "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/properties/available").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/dashboard").permitAll()

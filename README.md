@@ -1,10 +1,14 @@
-# Nancy Immo — Plateforme de gestion locative
+<div align="center">
 
-Application web **full-stack** de gestion locative pour bailleurs et locataires : suivi des biens,
-des baux, des paiements (avec **Stripe**), génération de documents **PDF** (baux, quittances),
-candidatures en ligne et espaces cloisonnés par rôle.
+# Nancy Immo
+
+**A full-stack rental property management platform for landlords and tenants.**
+
+Property portfolio, leases, online rent payments with Stripe, real PDF documents
+(lease agreements & rent receipts), online applications, and strictly partitioned role-based workspaces.
 
 <p>
+  <a href="https://github.com/amadoudiop04/nancyImmolearning/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/amadoudiop04/nancyImmolearning/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Spring Boot" src="https://img.shields.io/badge/Spring%20Boot-4.0-6DB33F?logo=springboot&logoColor=white">
   <img alt="Java" src="https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white">
   <img alt="Angular" src="https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white">
@@ -13,140 +17,151 @@ candidatures en ligne et espaces cloisonnés par rôle.
   <img alt="Stripe" src="https://img.shields.io/badge/Stripe-Checkout-635BFF?logo=stripe&logoColor=white">
 </p>
 
+</div>
+
 ---
 
-## Sommaire
+## Table of contents
 
-- [Aperçu](#aperçu)
-- [Fonctionnalités](#fonctionnalités)
-- [Pile technique](#pile-technique)
+- [Overview](#overview)
+- [Features](#features)
+- [Tech stack](#tech-stack)
 - [Architecture](#architecture)
-- [Modèle de données](#modèle-de-données)
-- [Prérequis](#prérequis)
-- [Démarrage rapide (local)](#démarrage-rapide-local)
-- [Comptes de démonstration](#comptes-de-démonstration)
+- [Data model](#data-model)
+- [Getting started](#getting-started)
+- [Demo accounts](#demo-accounts)
 - [Configuration](#configuration)
-- [API REST](#api-rest)
-- [Sécurité](#sécurité)
-- [Déploiement](#déploiement)
-- [Structure du dépôt](#structure-du-dépôt)
-- [Documentation complémentaire](#documentation-complémentaire)
+- [API reference](#api-reference)
+- [Interactive API documentation](#interactive-api-documentation)
+- [Security](#security)
+- [Testing and code quality](#testing-and-code-quality)
+- [Continuous integration](#continuous-integration)
+- [Deployment](#deployment)
+- [Repository structure](#repository-structure)
+- [Further documentation](#further-documentation)
+- [Author](#author)
 
 ---
 
-## Aperçu
+## Overview
 
-Nancy Immo est une application de gestion immobilière destinée à deux profils d'utilisateurs :
+Nancy Immo is a property management application built around two user profiles:
 
-- **Le bailleur** administre son portefeuille (immeubles, biens, locataires, baux), encaisse les
-  loyers, génère les documents contractuels et traite les candidatures reçues en ligne.
-- **Le locataire** accède à un espace personnel où il consulte son bien, son relevé de compte,
-  ses documents, et règle ses loyers (y compris la régularisation des arriérés) par carte bancaire.
+- **Landlords** manage their portfolio (buildings, properties, tenants, leases), collect rent,
+  generate contractual documents, and process applications received online.
+- **Tenants** get a personal workspace where they can view their property, their account statement
+  and their documents, and pay rent by card — including catching up on overdue months.
 
-L'isolation des données est stricte : **chaque bailleur ne voit que ses propres données**, et chaque
-locataire n'accède qu'à son propre bail. Cette séparation est garantie côté serveur (rôles Spring
-Security + filtrage par propriétaire dans chaque service).
-
----
-
-## Fonctionnalités
-
-### Espace bailleur
-- **Tableau de bord** avec indicateurs clés (biens, locataires actifs, revenus mensuels, taux d'occupation) et animation des compteurs.
-- **Gestion des biens** : création/édition/suppression, rattachement à un immeuble, photo (URL), mise en location.
-- **Gestion des locataires** et des **baux** (avec relevé de compte débit/crédit et historique de paiement annuel sur 12 mois).
-- **Paiements** : suivi par statut (payé / en attente / en retard), statistiques, encaissement en ligne via Stripe.
-- **Documents PDF réels** : génération de **contrats de bail** et de **quittances** (mensuelles ou individuelles), import de pièces justificatives, téléchargement.
-- **Candidatures** : réception des dossiers déposés en ligne, tri par statut, acceptation / refus.
-- **Compte** : profil éditable, préférences de notification, suppression de compte (RGPD, cascade complète).
-
-### Espace locataire
-- Consultation de **son bien**, de son **relevé de compte** et de ses **documents**.
-- **Paiement en ligne** du loyer par carte (Stripe Checkout), avec **régularisation des arriérés** avant le mois courant.
-
-### Public (sans compte)
-- **Landing page** et **recherche de biens disponibles** (filtres budget / surface / type).
-- **Dépôt de candidature** en ligne pour un logement, sans création de compte.
-
-### Transverse
-- **Authentification JWT** cloisonnée par rôle (bailleur / locataire), **mot de passe oublié** (réinitialisation).
-- **Design responsive** (mobile → desktop), notifications *toast*, bandeau de consentement cookies (RGPD).
+Data isolation is strict: **each landlord only ever sees their own data**, and each tenant only
+accesses their own lease. This separation is enforced server-side (Spring Security roles combined
+with per-owner filtering in every service layer).
 
 ---
 
-## Pile technique
+## Features
 
-| Couche        | Technologies |
-|---------------|--------------|
-| **Backend**   | Spring Boot 4.0, Java 21, Spring Web MVC, Spring Data JPA / Hibernate, Spring Security, JWT (jjwt 0.12.6), Bean Validation |
-| **Base de données** | PostgreSQL (schéma auto-géré par Hibernate `ddl-auto=update`) |
-| **PDF**       | OpenPDF 1.3.43 (`com.lowagie.text`) |
-| **Paiements** | Stripe Java 28.4.0 (Checkout + webhook) |
-| **Frontend**  | Angular 21 (composants *standalone*, syntaxe `@if`/`@for`), TypeScript 5.9, RxJS, Tailwind CSS 3.4 |
-| **Build**     | Maven (wrapper `mvnw`) · Angular CLI / npm |
-| **Déploiement** | Docker (backend) · Render · Netlify · Neon (PostgreSQL) |
+### Landlord workspace
+- **Dashboard** with key indicators (properties, active tenants, monthly revenue, occupancy rate) and animated counters.
+- **Property management**: create / edit / delete, attach to a building, photo (URL), publish for rent.
+- **Tenant and lease management**, including a debit/credit account statement and a rolling 12-month payment history.
+- **Payments**: tracking by status (paid / pending / late), aggregated statistics, online collection via Stripe.
+- **Real PDF documents**: generation of **lease agreements** and **rent receipts** (bulk or individual), upload of supporting documents, download.
+- **Applications**: inbox of online applications, filtering by status, accept / reject.
+- **Account**: editable profile, notification preferences, account deletion (GDPR, full cascade).
+
+### Tenant workspace
+- Access to **their property**, **account statement** and **documents**.
+- **Online rent payment** by card (Stripe Checkout), including **settlement of arrears** accumulated before the current month.
+
+### Public (no account required)
+- **Landing page** and **search for available properties** (budget / area / type filters).
+- **Online rental application** for a property, without creating an account.
+
+### Cross-cutting
+- **JWT authentication** partitioned by role (landlord / tenant), plus **forgot password** with email reset.
+- **Google Sign-In** (optional, server-side ID token verification).
+- **Responsive design** (mobile → desktop), *toast* notifications, cookie consent banner (GDPR).
+
+---
+
+## Tech stack
+
+| Layer | Technologies |
+|-------|--------------|
+| **Backend** | Spring Boot 4.0, Java 21, Spring Web MVC, Spring Data JPA / Hibernate, Spring Security, JWT (jjwt 0.12.6), Bean Validation |
+| **Database** | PostgreSQL (schema managed by Hibernate `ddl-auto=update`) |
+| **PDF** | OpenPDF 1.3.43 (`com.lowagie.text`) |
+| **Payments** | Stripe Java 28.4.0 (Checkout + webhook) |
+| **API docs** | springdoc-openapi 2.7.0 (Swagger UI + OpenAPI 3) |
+| **Frontend** | Angular 21 (standalone components, `@if` / `@for` control flow), TypeScript 5.9, RxJS, Tailwind CSS 3.4 |
+| **Testing / quality** | JUnit 5, Mockito, JaCoCo, Checkstyle (Google rules) · Karma + Jasmine, ESLint (angular-eslint) |
+| **Build** | Maven (`mvnw` wrapper) · Angular CLI / npm |
+| **Deployment** | Docker (backend) · Render · Netlify · Neon (PostgreSQL) |
 
 ---
 
 ## Architecture
 
-L'application se compose de **trois briques** déployables indépendamment :
+The application is made of **three independently deployable pieces**:
 
-```
-┌──────────────────────┐        HTTPS         ┌───────────────────────┐        JDBC/SSL       ┌────────────────┐
-│   Frontend Angular    │  ───────────────▶   │   Backend Spring Boot  │  ─────────────────▶  │   PostgreSQL    │
-│   (Netlify)           │   /api/* (proxy)     │   API REST + JWT (Render)│                     │   (Neon)        │
-└──────────────────────┘                      └───────────────────────┘                       └────────────────┘
-                                                        │
-                                                        ▼
-                                                 Stripe Checkout (paiements)
+```mermaid
+flowchart LR
+    U["Browser"] --> FE["Angular 21 SPA<br/>Netlify"]
+    FE -->|"/api/* (same-origin proxy)"| BE["Spring Boot 4 REST API<br/>Render · Docker"]
+    BE -->|"JDBC / SSL"| DB[("PostgreSQL<br/>Neon")]
+    BE -->|"Checkout session"| ST["Stripe"]
+    ST -->|"Webhook"| BE
+    BE -->|"SMTP"| MAIL["Password reset emails"]
 ```
 
-- Le **frontend** ne communique avec le backend que via `/api/*`. En production, un proxy Netlify relaie
-  ces appels vers le backend Render : le navigateur ne fait que des requêtes *same-origin* (pas de CORS côté client).
-- Le **backend** expose une API REST sécurisée par jetons JWT et applique l'isolation des données par rôle.
-- La **base** PostgreSQL est provisionnée à distance (Neon) en SSL ; le schéma est généré au premier démarrage.
+- The **frontend** only talks to the backend through `/api/*`. In production a Netlify proxy relays
+  those calls to the Render backend, so the browser only ever issues *same-origin* requests (no client-side CORS).
+- The **backend** exposes a REST API secured by JWT tokens and enforces per-role data isolation.
+- The **database** is a remote PostgreSQL instance (Neon) over SSL; the schema is generated on first start.
 
 ---
 
-## Modèle de données
+## Data model
 
-Le domaine repose sur **8 entités** JPA. Les relations complètes (mappings, clés étrangères, cardinalités)
-sont documentées dans [`backend/RELATIONS_ENTITES.md`](backend/RELATIONS_ENTITES.md).
+The domain is built on **8 JPA entities**. Full mappings, foreign keys and cardinalities are documented
+in [`backend/RELATIONS_ENTITES.md`](backend/RELATIONS_ENTITES.md).
 
+```mermaid
+erDiagram
+    LANDLORD ||--o{ BUILDING : "owns"
+    LANDLORD ||--o{ PROPERTY : "owns"
+    LANDLORD ||--o{ TENANT : "manages"
+    LANDLORD ||--o{ DOCUMENT : "owns"
+    BUILDING ||--o{ PROPERTY : "contains"
+    PROPERTY ||--o| LEASE : "is rented through"
+    TENANT   ||--o{ LEASE : "signs"
+    LEASE    ||--o{ PAYMENT : "generates"
+    PROPERTY ||--o{ APPLICATION : "receives"
+    PROPERTY ||--o{ DOCUMENT : "may be attached to"
+    TENANT   ||--o{ DOCUMENT : "may be attached to"
 ```
-Building (1) ──< (N) Property
-Landlord (1) ──< (N) Property / Building / Tenant / Document
-Property (1) ──── (0..1) Lease
-Tenant   (1) ──< (N) Lease
-Lease    (1) ──< (N) Payment
-Property (1) ──< (N) Application
-Document      >── Landlord / Property? / Tenant?
-```
 
-- `Property` porte les clés étrangères vers `Building` et `Landlord`.
-- `Tenant` porte la clé vers `Landlord` (**isolation par bailleur**).
-- `Lease` référence `Property` (unique) et `Tenant`.
-- `Payment` référence `Lease` ; `Application` référence `Property`.
-- `Document` référence `Landlord`, et optionnellement `Property` et/ou `Tenant`.
+- `Property` holds the foreign keys to `Building` and `Landlord`.
+- `Tenant` holds the foreign key to `Landlord` (**per-landlord isolation**).
+- `Lease` references `Property` (unique) and `Tenant`.
+- `Payment` references `Lease`; `Application` references `Property`.
+- `Document` references `Landlord`, and optionally `Property` and/or `Tenant`.
 
 ---
 
-## Prérequis
+## Getting started
+
+### Prerequisites
 
 - **Java 21** (JDK)
-- **Maven** — ou le wrapper fourni (`mvnw` / `mvnw.cmd`)
-- **Node.js** (LTS récent) et **npm**
-- **PostgreSQL** (une base locale nommée `nancyImmo` par défaut)
-- *(optionnel)* une **clé Stripe test** (`sk_test_…`) pour activer les paiements en ligne
+- **Maven** — or the bundled wrapper (`mvnw.cmd` on Windows)
+- **Node.js** (recent LTS) and **npm**
+- **PostgreSQL** (a local database named `nancyImmo` by default)
+- *(optional)* a **Stripe test key** (`sk_test_…`) to enable online payments
 
----
+### 1. Database
 
-## Démarrage rapide (local)
-
-### 1. Base de données
-
-Créez une base PostgreSQL locale (nom par défaut : `nancyImmo`) :
+Create a local PostgreSQL database (default name: `nancyImmo`):
 
 ```sql
 CREATE DATABASE "nancyImmo";
@@ -156,216 +171,293 @@ CREATE DATABASE "nancyImmo";
 
 ```bash
 cd backend
-cp .env.example .env          # ajustez les identifiants BDD / le secret JWT
-./mvnw spring-boot:run        # Windows : mvnw.cmd spring-boot:run
+cp .env.example .env          # adjust DB credentials / JWT secret
+mvn spring-boot:run           # Windows: mvnw.cmd spring-boot:run
 ```
 
-Au premier démarrage sur une base vide, un **jeu de données de démonstration** est inséré
-automatiquement (2 immeubles, 6 biens, 3 locataires, baux, paiements, candidatures…).
+On the first start against an empty database, a **demo dataset** is inserted automatically
+(2 buildings, 6 properties, 3 tenants, leases, payments, applications…).
 
 ### 3. Frontend (port 4200)
 
 ```bash
 cd frontend
 npm install
-npm start                     # ng serve, avec proxy /api → http://localhost:8080
+npm start                     # ng serve, with an /api → http://localhost:8080 proxy
 ```
 
-Ouvrez ensuite **http://localhost:4200**.
+Then open **http://localhost:4200**.
 
 ---
 
-## Comptes de démonstration
+## Demo accounts
 
-Insérés automatiquement sur une base fraîche :
+Seeded automatically on a fresh database:
 
-| Rôle       | Identifiant                     | Mot de passe  |
-|------------|---------------------------------|---------------|
-| Bailleur   | `nancy@nancyimmo.fr`            | `password123` |
-| Locataire  | `thomas.bernard@email.fr`       | `password123` |
+| Role | Username | Password |
+|------|----------|----------|
+| Landlord | `nancy@nancyimmo.fr` | `password123` |
+| Tenant | `thomas.bernard@email.fr` | `password123` |
 
 ---
 
 ## Configuration
 
-Le backend lit sa configuration depuis les variables d'environnement (fichier `backend/.env` en local,
-variables du PaaS en production). Voir [`backend/.env.example`](backend/.env.example).
+The backend reads its configuration from environment variables (a `backend/.env` file locally,
+PaaS variables in production). See [`backend/.env.example`](backend/.env.example).
 
-| Variable | Rôle | Défaut (local) |
-|----------|------|----------------|
-| `db_host` / `db_port` / `db_name` | Connexion PostgreSQL locale | `localhost` / `5432` / `nancyImmo` |
-| `db_username` / `db_password` | Identifiants PostgreSQL | `postgres` / `root` |
-| `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Surcharge complète de la datasource (prod / Neon) | — |
-| `SECURITY_JWT_SECRET` | Secret de signature des jetons JWT (HS256) | *à définir* |
-| `APP_CORS_ALLOWED_ORIGINS` | Origines autorisées (CORS), séparées par des virgules | `http://localhost:4200` |
-| `APP_FRONTEND_URL` | URL du frontend (redirections Stripe + lien de réinitialisation email) | `http://localhost:4200` |
-| `MAIL_HOST` / `MAIL_PORT` | Serveur SMTP (email de réinitialisation) | `smtp.gmail.com` / `587` |
-| `MAIL_USERNAME` / `MAIL_PASSWORD` | Identifiants SMTP (Gmail : *mot de passe d'application*) — vides = envoi désactivé (lien loggé) | *(vide)* |
-| `MAIL_FROM` | Adresse expéditrice affichée | `MAIL_USERNAME` |
-| `GOOGLE_CLIENT_ID` | Client ID OAuth 2.0 Google — vide = bouton Google masqué | *(vide)* |
-| `STRIPE_SECRET_KEY` | Clé secrète Stripe (`sk_test_…`) — sinon les paiements renvoient 503 | *(vide)* |
-| `STRIPE_WEBHOOK_SECRET` | Secret du webhook Stripe (`whsec_…`), optionnel | *(vide)* |
-| `PORT` | Port d'écoute du serveur (injecté par le PaaS) | `8080` |
+| Variable | Purpose | Default (local) |
+|----------|---------|-----------------|
+| `db_host` / `db_port` / `db_name` | Local PostgreSQL connection | `localhost` / `5432` / `nancyImmo` |
+| `db_username` / `db_password` | PostgreSQL credentials | `postgres` / `root` |
+| `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Full datasource override (production / Neon) | — |
+| `SECURITY_JWT_SECRET` | JWT signing secret (HS256) | *required* |
+| `APP_CORS_ALLOWED_ORIGINS` | Allowed CORS origins, comma-separated | `http://localhost:4200` |
+| `APP_FRONTEND_URL` | Frontend URL (Stripe redirects + password reset links) | `http://localhost:4200` |
+| `MAIL_HOST` / `MAIL_PORT` | SMTP server (password reset emails) | `smtp.gmail.com` / `587` |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials (Gmail: *app password*) — empty disables sending (link is logged instead) | *(empty)* |
+| `MAIL_FROM` | Displayed sender address | `MAIL_USERNAME` |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 client ID — empty hides the Google button | *(empty)* |
+| `STRIPE_SECRET_KEY` | Stripe secret key (`sk_test_…`) — otherwise payment endpoints return 503 | *(empty)* |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook secret (`whsec_…`), optional | *(empty)* |
+| `PORT` | HTTP listening port (injected by the PaaS) | `8080` |
 
-### Connexion Google & emails de réinitialisation
+### Google Sign-In and password reset emails
 
-Ces deux fonctionnalités sont **optionnelles** : sans configuration, l'app reste pleinement
-utilisable (le bouton Google est masqué, et le lien de réinitialisation est écrit dans les logs
-du backend au lieu d'être envoyé par email).
+Both features are **optional**: with no configuration the app remains fully usable — the Google
+button is hidden, and the reset link is written to the backend logs instead of being emailed.
 
-**Connexion Google** — dans la [console Google Cloud](https://console.cloud.google.com/apis/credentials),
-créez un identifiant OAuth 2.0 de type *Application Web*, ajoutez votre origine
-(`http://localhost:4200` en local) dans **Origines JavaScript autorisées**, puis renseignez
-`GOOGLE_CLIENT_ID`. Un compte Google inconnu crée un **bailleur** ; un email déjà connu se
-connecte avec son rôle existant.
+**Google Sign-In** — in the [Google Cloud console](https://console.cloud.google.com/apis/credentials),
+create a *Web application* OAuth 2.0 client, add your origin (`http://localhost:4200` locally) under
+**Authorized JavaScript origins**, then set `GOOGLE_CLIENT_ID`. A known email signs in with its existing
+role. An unknown email creates an account of the **type chosen by the user**: on `/inscription` the
+Landlord/Tenant selector also applies to the Google button, and on `/connexion` a modal asks for the
+account type before creating it.
 
-**Emails (Gmail)** — activez la double authentification sur le compte Google, générez un
-[mot de passe d'application](https://myaccount.google.com/apppasswords), puis renseignez
-`MAIL_USERNAME` (votre adresse Gmail) et `MAIL_PASSWORD` (le mot de passe d'application à 16
-caractères). Le lien de réinitialisation pointe vers `APP_FRONTEND_URL/reset?token=…` (valable 30 min).
+**Emails (Gmail)** — enable two-factor authentication on the Google account, generate an
+[app password](https://myaccount.google.com/apppasswords), then set `MAIL_USERNAME` (your Gmail address)
+and `MAIL_PASSWORD` (the 16-character app password). The reset link points to
+`APP_FRONTEND_URL/reset?token=…` and is valid for 30 minutes.
 
-> ⚠️ Ne committez **jamais** de `.env` réel ni de secret. Générez un secret JWT fort, par ex. `openssl rand -base64 48`.
+> [!WARNING]
+> Never commit a real `.env` file or any secret. Generate a strong JWT secret, e.g. `openssl rand -base64 48`.
 
 ---
 
-## API REST
+## API reference
 
-Base : `/api`. Toutes les réponses sont en JSON. Les endpoints protégés attendent un en-tête
-`Authorization: Bearer <JWT>`.
+Base path: `/api`. All responses are JSON. Protected endpoints expect an
+`Authorization: Bearer <JWT>` header.
 
-### Authentification — `/api/auth` *(public sauf `/me`)*
-| Méthode | Chemin | Description |
-|---------|--------|-------------|
-| GET  | `/config` | Configuration publique (Client ID Google) |
-| POST | `/register` | Inscription (rôle bailleur ou locataire) |
-| POST | `/login` | Connexion → renvoie un JWT |
-| POST | `/google` | Connexion / inscription via Google (ID token vérifié côté serveur) |
-| POST | `/forgot-password` | Envoie un email de réinitialisation (message générique) |
-| POST | `/reset-password` | Réinitialisation via jeton + auto-login |
-| GET  | `/me` | Profil de l'utilisateur connecté |
-| DELETE | `/me` | Suppression du compte (cascade) |
+### Authentication — `/api/auth` *(public except `/me`)*
 
-### Biens — `/api/properties`
-| Méthode | Chemin | Accès |
-|---------|--------|-------|
-| GET | `/available` | **Public** — biens disponibles (recherche) |
-| GET · POST | `/` | Authentifié (scopé bailleur) |
-| GET | `/details` · `/{id}` · `/{id}/details` | Authentifié |
-| PUT · DELETE | `/{id}` | Authentifié |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/config` | Public configuration (Google client ID) |
+| POST | `/register` | Sign up (landlord or tenant role) |
+| POST | `/login` | Sign in → returns a JWT |
+| POST | `/google` | Google sign-in / sign-up (`{idToken, role?}` — ID token verified server-side; unknown email without `role` → 409 `requiresRole`) |
+| POST | `/forgot-password` | Sends a password reset email (generic response) |
+| POST | `/reset-password` | Reset via token + automatic login |
+| GET | `/me` | Current user profile |
+| DELETE | `/me` | Delete account (cascade) |
 
-### Locataires · Immeubles · Bailleurs · Baux
-| Ressource | Endpoints |
-|-----------|-----------|
+### Properties — `/api/properties`
+
+| Method | Path | Access |
+|--------|------|--------|
+| GET | `/available` | **Public** — available properties (search) |
+| GET · POST | `/` | Authenticated (landlord-scoped) |
+| GET | `/details` · `/{id}` · `/{id}/details` | Authenticated |
+| PUT · DELETE | `/{id}` | Authenticated |
+
+### Tenants · Buildings · Landlords · Leases
+
+| Resource | Endpoints |
+|----------|-----------|
 | `/api/tenants` | `GET` · `POST` · `GET/PUT/DELETE {id}` |
 | `/api/buildings` | `GET` · `POST` · `GET/PUT/DELETE {id}` |
 | `/api/landlords` | `GET` · `POST` · `GET/PUT/DELETE {id}` |
-| `/api/leases` | `GET` · `POST` · `GET/PUT/DELETE {id}` · `GET {id}/statement` (relevé) |
+| `/api/leases` | `GET` · `POST` · `GET/PUT/DELETE {id}` · `GET {id}/statement` (account statement) |
 
-### Paiements — `/api/payments`
-| Méthode | Chemin | Description |
-|---------|--------|-------------|
-| GET · POST | `/` | Liste / création |
-| GET | `/stats` | Totaux par statut |
-| POST | `/checkout` · `/confirm` | Paiement Stripe (bailleur) |
-| GET | `/tenant/{id}/history` | Historique annuel (12 mois) |
-| GET · PUT · DELETE | `/{id}` | Détail / maj / suppression |
+### Payments — `/api/payments`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET · POST | `/` | List / create |
+| GET | `/stats` | Totals by status |
+| POST | `/checkout` · `/confirm` | Stripe payment (landlord) |
+| GET | `/tenant/{id}/history` | Rolling 12-month history |
+| GET · PUT · DELETE | `/{id}` | Detail / update / delete |
 
 ### Documents — `/api/documents`
-| Méthode | Chemin | Description |
-|---------|--------|-------------|
-| POST | `/generate-bail` | Génère un contrat de bail (PDF) |
-| POST | `/generate-quittances` · `/generate-quittance` | Génère les quittances (groupées / individuelle) |
-| POST | `/upload` | Import d'une pièce justificative (multipart) |
-| GET | `/{id}/download` | Téléchargement du fichier |
-| GET · DELETE | `/` · `/{id}` | Liste / détail / suppression |
 
-### Candidatures — `/api/applications`
-| Méthode | Chemin | Accès |
-|---------|--------|-------|
-| POST | `/` | **Public** — dépôt d'un dossier |
-| GET | `/` | Authentifié (bailleur) |
-| PUT | `/{id}/status` · DELETE `/{id}` | Authentifié |
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/generate-bail` | Generate a lease agreement (PDF) |
+| POST | `/generate-quittances` · `/generate-quittance` | Generate rent receipts (bulk / single) |
+| POST | `/upload` | Upload a supporting document (multipart) |
+| GET | `/{id}/download` | Download the file |
+| GET · DELETE | `/` · `/{id}` | List / detail / delete |
 
-### Tableau de bord — `/api/dashboard`
-| Méthode | Chemin | Accès |
-|---------|--------|-------|
-| GET | `/` | **Public** — statistiques globales |
-| GET | `/me` | Authentifié — statistiques du bailleur connecté |
+### Applications — `/api/applications`
 
-### Espace locataire — `/api/portal` *(rôle `LOCATAIRE`)*
-| Méthode | Chemin | Description |
-|---------|--------|-------------|
-| GET | `/property` | Son bien |
-| GET | `/statement` · `/dues` | Relevé de compte / arriérés à régulariser |
-| GET | `/documents` · `/documents/{id}/download` | Ses documents |
-| POST | `/checkout` · `/confirm` | Paiement en ligne (scopé locataire) |
+| Method | Path | Access |
+|--------|------|--------|
+| POST | `/` | **Public** — submit an application |
+| GET | `/` | Authenticated (landlord) |
+| PUT | `/{id}/status` | Authenticated |
+| DELETE | `/{id}` | Authenticated |
 
-### Divers
-| Méthode | Chemin | Accès |
-|---------|--------|-------|
-| POST | `/api/stripe/webhook` | **Public** (signé) — événements Stripe |
-| GET | `/` | **Public** — *health check* |
+### Dashboard — `/api/dashboard`
 
----
+| Method | Path | Access |
+|--------|------|--------|
+| GET | `/` | **Public** — global statistics |
+| GET | `/me` | Authenticated — statistics for the current landlord |
 
-## Sécurité
+### Tenant portal — `/api/portal` *(role `LOCATAIRE`)*
 
-- **Authentification stateless par JWT** (HS256, expiration 24 h) ; mots de passe hachés avec **BCrypt**.
-- **Deux rôles** : `BAILLEUR` et `LOCATAIRE`. L'espace locataire (`/api/portal/**`) est réservé au rôle `LOCATAIRE`.
-- **Isolation des données** : chaque service filtre par propriétaire (le bailleur connecté) ; tout `landlordId`
-  envoyé par le client est ignoré. Un locataire n'accède qu'aux données rattachées à ses propres baux.
-- **CORS** restreint aux origines déclarées (`APP_CORS_ALLOWED_ORIGINS`).
-- **Endpoints publics** volontairement ouverts : landing / *health check* (`/`), authentification (`/api/auth/**`),
-  biens disponibles (`GET /api/properties/available`), statistiques globales (`GET /api/dashboard`),
-  dépôt de candidature (`POST /api/applications`), webhook Stripe (`POST /api/stripe/webhook`).
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/property` | Their property |
+| GET | `/statement` · `/dues` | Account statement / outstanding months |
+| GET | `/documents` · `/documents/{id}/download` | Their documents |
+| POST | `/checkout` · `/confirm` | Online payment (tenant-scoped) |
+
+### Misc
+
+| Method | Path | Access |
+|--------|------|--------|
+| POST | `/api/stripe/webhook` | **Public** (signature-verified) — Stripe events |
+| GET | `/` | **Public** — health check |
 
 ---
 
-## Déploiement
+## Interactive API documentation
 
-Le déploiement complet (gratuit et sécurisé) est décrit pas à pas dans **[`DEPLOYMENT.md`](DEPLOYMENT.md)**.
+The backend ships with **springdoc-openapi**, so the whole API can be browsed and tried out from the browser
+once the backend is running:
 
-En résumé :
+| Resource | URL |
+|----------|-----|
+| Swagger UI | <http://localhost:8080/swagger-ui.html> |
+| OpenAPI 3 schema (JSON) | <http://localhost:8080/v3/api-docs> |
 
-| Brique | Hébergeur | Configuration |
-|--------|-----------|---------------|
-| Base PostgreSQL | **Neon** | chaîne JDBC SSL |
-| Backend Spring Boot | **Render** (Docker) | [`render.yaml`](render.yaml) + [`backend/Dockerfile`](backend/Dockerfile) |
-| Frontend Angular | **Netlify** | [`netlify.toml`](netlify.toml) (proxy `/api/*` + fallback SPA) |
+> [!NOTE]
+> These two routes are declared `permitAll()` in `SecurityConfig` for convenience during development.
+> Before going to production, disable them (`springdoc.api-docs.enabled=false`) or restrict them to an
+> authenticated role, so the full API surface is not publicly exposed.
 
 ---
 
-## Structure du dépôt
+## Security
+
+- **Stateless JWT authentication** (HS256, 24 h expiry); passwords hashed with **BCrypt**.
+- **Two roles**: `BAILLEUR` (landlord) and `LOCATAIRE` (tenant). The tenant portal (`/api/portal/**`) is restricted to `LOCATAIRE`.
+- **Data isolation**: every service filters by owner (the authenticated landlord); any `landlordId`
+  sent by the client is ignored. A tenant can only reach data attached to their own leases.
+- **CORS** restricted to the declared origins (`APP_CORS_ALLOWED_ORIGINS`).
+- **Deliberately public endpoints**: landing / health check (`/`), authentication (`/api/auth/**`),
+  available properties (`GET /api/properties/available`), global statistics (`GET /api/dashboard`),
+  application submission (`POST /api/applications`), Stripe webhook (`POST /api/stripe/webhook`),
+  and the API documentation routes listed above.
+
+---
+
+## Testing and code quality
+
+### Backend
+
+```bash
+cd backend
+mvn test                      # unit tests (JUnit 5 + Mockito)
+mvn verify                    # tests + JaCoCo coverage report
+mvn checkstyle:check          # Google code style report (non-blocking)
+```
+
+Current unit tests cover the JWT service (token issuance, claims, validation) and the tenant arrears
+computation in `PortalService`. The JaCoCo HTML report is generated at
+`backend/target/site/jacoco/index.html`.
+
+### Frontend
+
+```bash
+cd frontend
+npm test                      # Karma + Jasmine
+npm run lint                  # ESLint (angular-eslint)
+npm run build                 # production build
+```
+
+---
+
+## Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every pull request targeting `main` or `master`,
+with two parallel jobs:
+
+| Job | Steps |
+|-----|-------|
+| `backend` | JDK 21 (Temurin) + Maven cache → `mvn -B clean package` (build **and** tests) |
+| `frontend` | Node 20 + npm cache → `npm ci` → `npm run build` |
+
+---
+
+## Deployment
+
+The full (free and secure) deployment procedure is described step by step in **[`DEPLOYMENT.md`](DEPLOYMENT.md)**.
+
+In short:
+
+| Component | Host | Configuration |
+|-----------|------|---------------|
+| PostgreSQL database | **Neon** | JDBC SSL connection string |
+| Spring Boot backend | **Render** (Docker) | [`render.yaml`](render.yaml) + [`backend/Dockerfile`](backend/Dockerfile) |
+| Angular frontend | **Netlify** | [`netlify.toml`](netlify.toml) (`/api/*` proxy + SPA fallback) |
+
+The backend image is a multi-stage Docker build (Maven → JRE 21) and listens on `$PORT`, as expected by most PaaS providers.
+
+---
+
+## Repository structure
 
 ```
 nancy-SpringBoot/
-├── backend/                     # API Spring Boot (Java 21, Maven)
+├── backend/                     # Spring Boot API (Java 21, Maven)
 │   ├── src/main/java/com/nancyimmo/bailleur/
-│   │   ├── controllers/         # Endpoints REST
-│   │   ├── services/            # Logique métier (isolation par bailleur, PDF, Stripe)
+│   │   ├── controllers/         # REST endpoints
+│   │   ├── services/            # Business logic (per-landlord isolation, PDF, Stripe)
 │   │   ├── repositories/        # Spring Data JPA
-│   │   ├── models/              # Entités JPA (8 entités)
-│   │   ├── dto/                 # Objets de transfert (dont dto/auth)
-│   │   ├── security/            # JWT, filtres, config Spring Security, CurrentUser
-│   │   └── config/              # DataSeeder (démo), backfill d'appartenance
-│   ├── Dockerfile               # Build multi-étapes (Maven → JRE)
-│   ├── RELATIONS_ENTITES.md     # Documentation du modèle de données
+│   │   ├── models/              # JPA entities (8)
+│   │   ├── dto/                 # Data transfer objects (incl. dto/auth)
+│   │   ├── security/            # JWT, filters, Spring Security config, CurrentUser
+│   │   └── config/              # DataSeeder (demo data), ownership backfill
+│   ├── src/test/java/           # JUnit 5 unit tests
+│   ├── Dockerfile               # Multi-stage build (Maven → JRE)
+│   ├── RELATIONS_ENTITES.md     # Data model documentation
 │   └── .env.example
-├── frontend/                    # Application Angular 21 + Tailwind
+├── frontend/                    # Angular 21 + Tailwind application
 │   └── src/app/
 │       ├── pages/               # accueil, auth, bailleur/*, locataire, recherche, profil
 │       ├── services/            # api, auth, guards, interceptor, toast
-│       ├── shared/              # toast, bandeau cookies
-│       └── layout/              # en-tête global
-├── DEPLOYMENT.md                # Guide de déploiement (Neon + Render + Netlify)
-├── render.yaml                  # Blueprint Render (backend)
-└── netlify.toml                 # Configuration Netlify (frontend)
+│       ├── shared/              # toasts, cookie banner, Google sign-in button
+│       └── layout/              # global header
+├── .github/workflows/ci.yml     # CI pipeline (backend + frontend)
+├── DEPLOYMENT.md                # Deployment guide (Neon + Render + Netlify)
+├── render.yaml                  # Render blueprint (backend)
+└── netlify.toml                 # Netlify configuration (frontend)
 ```
 
 ---
 
-## Documentation complémentaire
+## Further documentation
 
-- [`DEPLOYMENT.md`](DEPLOYMENT.md) — guide de mise en ligne (Neon + Render + Netlify) et checklist sécurité.
-- [`backend/RELATIONS_ENTITES.md`](backend/RELATIONS_ENTITES.md) — relations JPA entre entités.
-- [`frontend/README.md`](frontend/README.md) — commandes Angular CLI (serve, build, test).
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) — go-live guide (Neon + Render + Netlify) and security checklist.
+- [`backend/RELATIONS_ENTITES.md`](backend/RELATIONS_ENTITES.md) — JPA relationships between entities.
+- [`frontend/README.md`](frontend/README.md) — Angular CLI commands (serve, build, test).
+
+---
+
+## Author
+
+**Amadou Diop** — [@amadoudiop04](https://github.com/amadoudiop04)
