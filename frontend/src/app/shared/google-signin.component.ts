@@ -1,8 +1,21 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 
+/** Sous-ensemble de l'API Google Identity Services réellement utilisé ici. */
+interface GoogleIdentityServices {
+  accounts: {
+    id: {
+      initialize(config: {
+        client_id: string;
+        callback: (resp: { credential: string }) => void;
+      }): void;
+      renderButton(parent: HTMLElement, options: Record<string, unknown>): void;
+    };
+  };
+}
+
 // Fourni par le script Google Identity Services chargé dans index.html.
-declare const google: any;
+declare const google: GoogleIdentityServices;
 
 /**
  * Bouton « Continuer avec Google ».
@@ -17,14 +30,14 @@ declare const google: any;
   template: `<div #btn style="display:flex;justify-content:center;min-height:0;"></div>`,
 })
 export class GoogleSigninComponent implements AfterViewInit {
+  private auth = inject(AuthService);
+
   /** Libellé du bouton Google. */
   @Input() text: 'signin_with' | 'signup_with' | 'continue_with' = 'continue_with';
   /** Émet l'ID token Google à la connexion. */
   @Output() credential = new EventEmitter<string>();
 
   @ViewChild('btn', { static: true }) btn!: ElementRef<HTMLDivElement>;
-
-  constructor(private auth: AuthService) {}
 
   ngAfterViewInit(): void {
     this.auth.getAuthConfig().subscribe({

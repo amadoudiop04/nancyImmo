@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -60,23 +60,23 @@ import { GoogleSigninComponent } from '../../shared/google-signin.component';
           <form (ngSubmit)="register()" style="margin-top:18px;">
             <div class="nm-form" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
               <div>
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Prénom</label>
-                <input [(ngModel)]="form.firstName" name="firstName" placeholder="Nancy" required
+                <label for="signup-firstname" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Prénom</label>
+                <input id="signup-firstname" [(ngModel)]="form.firstName" name="firstName" placeholder="Nancy" required
                   style="width:100%;padding:12px 13px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14px;outline:none;background:#fff;">
               </div>
               <div>
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom</label>
-                <input [(ngModel)]="form.lastName" name="lastName" placeholder="Aubert" required
+                <label for="signup-lastname" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom</label>
+                <input id="signup-lastname" [(ngModel)]="form.lastName" name="lastName" placeholder="Aubert" required
                   style="width:100%;padding:12px 13px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14px;outline:none;background:#fff;">
               </div>
             </div>
 
-            <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
-            <input [(ngModel)]="form.email" name="email" type="email" placeholder="vous@email.fr" required
+            <label for="signup-email" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
+            <input id="signup-email" [(ngModel)]="form.email" name="email" type="email" placeholder="vous@email.fr" required
               style="width:100%;padding:12px 13px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14px;outline:none;background:#fff;margin-bottom:14px;">
 
-            <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Mot de passe</label>
-            <input [(ngModel)]="form.password" name="password" type="password" placeholder="••••••••" required
+            <label for="signup-password" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Mot de passe</label>
+            <input id="signup-password" [(ngModel)]="form.password" name="password" type="password" placeholder="••••••••" required
               style="width:100%;padding:12px 13px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14px;outline:none;background:#fff;">
 
             <label style="display:flex;align-items:flex-start;gap:9px;margin-top:16px;font-size:12.5px;color:#5A655F;cursor:pointer;line-height:1.4;">
@@ -110,18 +110,22 @@ import { GoogleSigninComponent } from '../../shared/google-signin.component';
   `
 })
 export class InscriptionComponent {
+  private auth = inject(AuthService);
+  private router = inject(Router);
+
   form = { firstName: '', lastName: '', email: '', password: '', role: 'BAILLEUR' as 'BAILLEUR' | 'LOCATAIRE' };
   acceptCgu = false;
   loading = false;
   error = '';
   googleError = '';
 
-  constructor(private auth: AuthService, private router: Router) {}
-
-  /** Inscription via Google : crée (ou récupère) le compte, puis redirige selon le rôle. */
+  /**
+   * Inscription via Google : le type de compte sélectionné ci-dessus (bailleur / locataire) est
+   * transmis au serveur, qui crée le bon compte. Pour un email déjà connu, son rôle existant prime.
+   */
   onGoogle(idToken: string) {
     this.googleError = '';
-    this.auth.loginWithGoogle(idToken).subscribe({
+    this.auth.loginWithGoogle(idToken, this.form.role).subscribe({
       next: (user) => this.router.navigate([user.role === 'LOCATAIRE' ? '/locataire' : '/bailleur']),
       error: (err) => {
         this.googleError = err?.error?.message || 'La connexion Google a échoué. Réessayez.';

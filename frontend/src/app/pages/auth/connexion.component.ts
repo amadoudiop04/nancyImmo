@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -40,16 +40,16 @@ import { GoogleSigninComponent } from '../../shared/google-signin.component';
           <p style="margin:8px 0 0;color:#5A655F;font-size:14.5px;">Accédez à votre espace Nancy Immo.</p>
 
           <form (ngSubmit)="login()" style="margin-top:26px;">
-            <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
-            <input [(ngModel)]="email" name="email" type="email" placeholder="vous@email.fr" required
+            <label for="login-email" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
+            <input id="login-email" [(ngModel)]="email" name="email" type="email" placeholder="vous@email.fr" required
               style="width:100%;padding:13px 14px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14.5px;outline:none;background:#fff;margin-bottom:16px;">
 
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;">Mot de passe</label>
-              <span (click)="openReset()" style="font-size:12.5px;color:#2A9D8F;font-weight:600;cursor:pointer;">Oublié ?</span>
+              <label for="login-password" style="font-size:12.5px;font-weight:600;color:#5A655F;">Mot de passe</label>
+              <button type="button" (click)="openReset()" style="background:none;border:none;padding:0;font-family:inherit;font-size:12.5px;color:#2A9D8F;font-weight:600;cursor:pointer;">Oublié ?</button>
             </div>
             <div style="position:relative;">
-              <input [(ngModel)]="password" name="password" [type]="showPassword ? 'text' : 'password'" placeholder="••••••••" required
+              <input id="login-password" [(ngModel)]="password" name="password" [type]="showPassword ? 'text' : 'password'" placeholder="••••••••" required
                 style="width:100%;padding:13px 44px 13px 14px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14.5px;outline:none;background:#fff;">
               <button type="button" (click)="showPassword = !showPassword"
                 [attr.aria-label]="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
@@ -91,9 +91,9 @@ import { GoogleSigninComponent } from '../../shared/google-signin.component';
 
       <!-- Modale : mot de passe oublié -->
       @if (showReset) {
-        <div (click)="closeReset()"
+        <div (click)="onResetBackdropClick($event)" role="presentation"
           style="position:fixed;inset:0;background:rgba(14,40,37,0.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;">
-          <div (click)="$event.stopPropagation()"
+          <div role="dialog" aria-modal="true"
             style="background:#fff;border-radius:18px;width:100%;max-width:420px;padding:30px 30px 26px;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
               <div>
@@ -107,8 +107,8 @@ import { GoogleSigninComponent } from '../../shared/google-signin.component';
             @if (!resetSent) {
               <p style="margin:12px 0 0;color:#5A655F;font-size:14px;line-height:1.5;">Entrez l'email de votre compte. Nous vous enverrons un lien pour choisir un nouveau mot de passe.</p>
               <form (ngSubmit)="requestReset()" style="margin-top:18px;">
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
-                <input [(ngModel)]="resetEmail" name="resetEmail" type="email" placeholder="vous@email.fr" required
+                <label for="reset-email" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Email</label>
+                <input id="reset-email" [(ngModel)]="resetEmail" name="resetEmail" type="email" placeholder="vous@email.fr" required
                   style="width:100%;padding:13px 14px;border:1px solid #D6DED9;border-radius:11px;font-family:inherit;font-size:14.5px;outline:none;background:#fff;">
                 @if (resetError) { <p style="color:#C2563B;font-size:13px;margin:14px 0 0;">{{ resetError }}</p> }
                 <button type="submit" [disabled]="resetLoading"
@@ -132,10 +132,63 @@ import { GoogleSigninComponent } from '../../shared/google-signin.component';
           </div>
         </div>
       }
+
+      <!-- Modale : type de compte à créer (1re connexion Google, email inconnu) -->
+      @if (showRoleChoice) {
+        <div (click)="onRoleChoiceBackdropClick($event)" role="presentation"
+          style="position:fixed;inset:0;background:rgba(14,40,37,0.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;">
+          <div role="dialog" aria-modal="true"
+            style="background:#fff;border-radius:18px;width:100%;max-width:440px;padding:30px 30px 26px;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#9AA49E;">Nouveau compte</div>
+                <h2 style="margin:6px 0 0;font-size:21px;font-weight:800;letter-spacing:-0.02em;">
+                  {{ googleFirstName ? 'Bienvenue ' + googleFirstName + ' !' : 'Bienvenue !' }}
+                </h2>
+              </div>
+              <button type="button" (click)="cancelRoleChoice()" aria-label="Fermer"
+                style="background:transparent;border:none;cursor:pointer;color:#9AA49E;font-size:22px;line-height:1;padding:2px 4px;">×</button>
+            </div>
+
+            <p style="margin:12px 0 0;color:#5A655F;font-size:14px;line-height:1.5;">
+              Aucun compte n'existe pour <strong style="color:#16201D;">{{ googleEmail }}</strong>.
+              Choisissez le type de compte à créer.
+            </p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;">
+              <button type="button" (click)="googleRole = 'BAILLEUR'"
+                [style.border]="googleRole === 'BAILLEUR' ? '2px solid #0E4F4A' : '1px solid #D6DED9'"
+                [style.background]="googleRole === 'BAILLEUR' ? '#E7F1EF' : '#fff'"
+                style="padding:12px;border-radius:12px;cursor:pointer;text-align:left;font-family:inherit;">
+                <div style="font-weight:700;font-size:14px;color:#16201D;">Bailleur</div>
+                <div style="font-size:11.5px;color:#5A655F;margin-top:2px;">Je gère mes biens</div>
+              </button>
+              <button type="button" (click)="googleRole = 'LOCATAIRE'"
+                [style.border]="googleRole === 'LOCATAIRE' ? '2px solid #0E4F4A' : '1px solid #D6DED9'"
+                [style.background]="googleRole === 'LOCATAIRE' ? '#E7F1EF' : '#fff'"
+                style="padding:12px;border-radius:12px;cursor:pointer;text-align:left;font-family:inherit;">
+                <div style="font-weight:700;font-size:14px;color:#16201D;">Locataire</div>
+                <div style="font-size:11.5px;color:#5A655F;margin-top:2px;">J'accède à mon logement</div>
+              </button>
+            </div>
+
+            @if (roleError) { <p style="color:#C2563B;font-size:13px;margin:14px 0 0;">{{ roleError }}</p> }
+
+            <button type="button" (click)="confirmRoleChoice()" [disabled]="googleLoading"
+              style="margin-top:20px;width:100%;padding:13px;border:none;border-radius:12px;background:#0E4F4A;color:#fff;font-family:inherit;font-weight:700;font-size:14.5px;cursor:pointer;">
+              {{ googleLoading ? 'Création…' : 'Créer mon compte' }}
+            </button>
+          </div>
+        </div>
+      }
     </div>
   `
 })
 export class ConnexionComponent {
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
   email = '';
   password = '';
   showPassword = false;
@@ -144,6 +197,15 @@ export class ConnexionComponent {
   error = '';
   googleError = '';
 
+  // Choix du type de compte à la 1re connexion Google (email inconnu du serveur)
+  showRoleChoice = false;
+  googleIdToken = '';
+  googleEmail = '';
+  googleFirstName = '';
+  googleRole: 'BAILLEUR' | 'LOCATAIRE' = 'BAILLEUR';
+  googleLoading = false;
+  roleError = '';
+
   // Flux « mot de passe oublié » (envoi d'un email)
   showReset = false;
   resetSent = false;
@@ -151,8 +213,6 @@ export class ConnexionComponent {
   resetMsg = '';
   resetError = '';
   resetLoading = false;
-
-  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) {}
 
   openReset() {
     this.showReset = true;
@@ -164,6 +224,21 @@ export class ConnexionComponent {
 
   closeReset() {
     this.showReset = false;
+  }
+
+  /** Ferme la modale au clic sur le fond, sans intercepter les clics du panneau. */
+  onResetBackdropClick(event: MouseEvent) {
+    if (event.target === event.currentTarget) this.closeReset();
+  }
+
+  onRoleChoiceBackdropClick(event: MouseEvent) {
+    if (event.target === event.currentTarget) this.cancelRoleChoice();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    if (this.showReset) this.closeReset();
+    else if (this.showRoleChoice) this.cancelRoleChoice();
   }
 
   requestReset() {
@@ -187,11 +262,35 @@ export class ConnexionComponent {
     });
   }
 
-  /** Connexion via Google : échange l'ID token contre un JWT, puis redirige selon le rôle. */
+  /**
+   * Connexion via Google : échange l'ID token contre un JWT, puis redirige selon le rôle.
+   * Si l'email n'a aucun compte, le serveur répond `requiresRole` → on demande le type de compte.
+   */
   onGoogle(idToken: string) {
     this.googleError = '';
-    this.auth.loginWithGoogle(idToken).subscribe({
+    this.googleIdToken = idToken;
+    this.googleSignIn();
+  }
+
+  /** Valide le type de compte choisi et rejoue la connexion Google avec ce rôle. */
+  confirmRoleChoice() {
+    this.roleError = '';
+    this.googleSignIn(this.googleRole);
+  }
+
+  cancelRoleChoice() {
+    this.showRoleChoice = false;
+    this.googleIdToken = '';
+    this.roleError = '';
+  }
+
+  /** Appelle /auth/google (avec le rôle si l'utilisateur vient de le choisir) puis redirige. */
+  private googleSignIn(role?: 'BAILLEUR' | 'LOCATAIRE') {
+    this.googleLoading = true;
+    this.auth.loginWithGoogle(this.googleIdToken, role).subscribe({
       next: (user) => {
+        this.googleLoading = false;
+        this.showRoleChoice = false;
         const redirect = this.route.snapshot.queryParamMap.get('redirect');
         if (redirect) {
           this.router.navigateByUrl(redirect);
@@ -200,7 +299,20 @@ export class ConnexionComponent {
         }
       },
       error: (err) => {
-        this.googleError = err?.error?.message || 'La connexion Google a échoué. Réessayez.';
+        this.googleLoading = false;
+        const message = err?.error?.message || 'La connexion Google a échoué. Réessayez.';
+        if (err?.status === 409 && err?.error?.requiresRole) {
+          // Email inconnu : on fait choisir le type de compte avant de le créer.
+          this.googleEmail = err.error.email || '';
+          this.googleFirstName = err.error.firstName || '';
+          this.showRoleChoice = true;
+          return;
+        }
+        if (this.showRoleChoice) {
+          this.roleError = message;
+        } else {
+          this.googleError = message;
+        }
       }
     });
   }

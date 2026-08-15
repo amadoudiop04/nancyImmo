@@ -164,59 +164,107 @@ public class AuthService {
     }
 
     /**
-     * Connexion via Google. On vérifie l'ID token, puis :
+     * Connexion / inscription via Google. On vérifie l'ID token, puis :
      * <ul>
      *   <li>si l'email correspond déjà à un compte (bailleur ou locataire) : connexion avec son rôle ;</li>
-     *   <li>sinon : création d'un nouveau compte <strong>bailleur</strong>.</li>
+     *   <li>si l'email est inconnu : création d'un compte du <strong>type demandé</strong>
+     *       ({@code requestedRole} = BAILLEUR ou LOCATAIRE) ;</li>
+     *   <li>si l'email est inconnu et qu'aucun type n'est demandé : {@link AccountTypeRequiredException}
+     *       — le client fait choisir le type de compte, puis rejoue l'appel avec le rôle.</li>
      * </ul>
      * Un mot de passe aléatoire est posé sur les comptes Google (jamais communiqué) afin que tous
      * les autres flux (/me, etc.) restent cohérents ; l'utilisateur pourra en définir un via
      * « mot de passe oublié » s'il souhaite aussi se connecter par email.
      */
     @Transactional
-    public AuthResponse loginWithGoogle(String idToken) {
+    public AuthResponse loginWithGoogle(String idToken, String requestedRole) {
         GoogleTokenVerifier.GoogleAccount g = googleTokenVerifier.verify(idToken);
         if (!g.emailVerified()) {
             throw new IllegalStateException("Cet email Google n'est pas vérifié.");
         }
         String email = g.email();
+        boolean wantsTenant = ROLE_TENANT.equalsIgnoreCase(requestedRole);
+        boolean wantsLandlord = ROLE.equalsIgnoreCase(requestedRole);
 
-        // Compte bailleur existant → connexion bailleur.
         LandlordModel landlord = landlordRepository.findByEmail(email).orElse(null);
-        if (landlord != null) {
-            if (landlord.getPassword() == null) {
-                landlord.setPassword(randomPassword());
-                landlordRepository.save(landlord);
-            }
-            return new AuthResponse(jwtService.generateToken(email, ROLE), email, ROLE,
-                    landlord.getFirstName(), landlord.getLastName());
-        }
-
-        // Fiche locataire existante → connexion locataire (on l'active si besoin).
         TenantModel tenant = tenantRepository.findByEmail(email).orElse(null);
-        if (tenant != null) {
-            if (tenant.getPassword() == null) {
-                tenant.setPassword(randomPassword());
-            }
-            if (tenant.getFirstName() == null || tenant.getFirstName().isBlank()) {
-                tenant.setFirstName(g.firstName());
-            }
-            if (tenant.getLastName() == null || tenant.getLastName().isBlank()) {
-                tenant.setLastName(g.lastName());
-            }
-            tenantRepository.save(tenant);
-            return new AuthResponse(jwtService.generateToken(email, ROLE_TENANT), email, ROLE_TENANT,
-                    tenant.getFirstName(), tenant.getLastName());
+
+        // Le type demandé est prioritaire quand une fiche de ce type existe déjà : un locataire créé
+        // par son bailleur peut ainsi « activer » sa fiche avec Google même s'il porte les deux rôles.
+        if (wantsTenant && tenant != null) {
+            return googleSignInTenant(tenant, g);
+        }
+        if (wantsLandlord && landlord != null) {
+            return googleSignInLandlord(landlord);
         }
 
-        // Email inconnu → nouveau compte bailleur.
+        // Sinon, on connecte le compte existant quel qu'il soit (bailleur prioritaire).
+        if (landlord != null) {
+            return googleSignInLandlord(landlord);
+        }
+        if (tenant != null) {
+            return googleSignInTenant(tenant, g);
+        }
+
+        // Email inconnu : impossible de deviner le type de compte, l'utilisateur doit le choisir.
+        if (!wantsTenant && !wantsLandlord) {
+            throw new AccountTypeRequiredException(email, g.firstName());
+        }
+        return wantsTenant ? googleCreateTenant(g) : googleCreateLandlord(g);
+    }
+
+    /** Connecte un bailleur existant via Google (pose un mot de passe si la fiche n'en avait pas). */
+    private AuthResponse googleSignInLandlord(LandlordModel landlord) {
+        if (landlord.getPassword() == null) {
+            landlord.setPassword(randomPassword());
+            landlordRepository.save(landlord);
+        }
+        String email = landlord.getEmail();
+        return new AuthResponse(jwtService.generateToken(email, ROLE), email, ROLE,
+                landlord.getFirstName(), landlord.getLastName());
+    }
+
+    /** Connecte un locataire via Google, en activant sa fiche (mot de passe / nom) si besoin. */
+    private AuthResponse googleSignInTenant(TenantModel tenant, GoogleTokenVerifier.GoogleAccount g) {
+        if (tenant.getPassword() == null) {
+            tenant.setPassword(randomPassword());
+        }
+        if (tenant.getFirstName() == null || tenant.getFirstName().isBlank()) {
+            tenant.setFirstName(g.firstName());
+        }
+        if (tenant.getLastName() == null || tenant.getLastName().isBlank()) {
+            tenant.setLastName(g.lastName());
+        }
+        tenantRepository.save(tenant);
+        String email = tenant.getEmail();
+        return new AuthResponse(jwtService.generateToken(email, ROLE_TENANT), email, ROLE_TENANT,
+                tenant.getFirstName(), tenant.getLastName());
+    }
+
+    /** Crée un compte bailleur à partir d'un compte Google. */
+    private AuthResponse googleCreateLandlord(GoogleTokenVerifier.GoogleAccount g) {
         LandlordModel created = new LandlordModel();
         created.setFirstName(g.firstName());
         created.setLastName(g.lastName());
-        created.setEmail(email);
+        created.setEmail(g.email());
         created.setPassword(randomPassword());
         landlordRepository.save(created);
-        return new AuthResponse(jwtService.generateToken(email, ROLE), email, ROLE,
+        return new AuthResponse(jwtService.generateToken(g.email(), ROLE), g.email(), ROLE,
+                created.getFirstName(), created.getLastName());
+    }
+
+    /**
+     * Crée un compte locataire à partir d'un compte Google. La fiche reste orpheline (sans bien)
+     * jusqu'à ce qu'un bailleur la rattache — même comportement que l'inscription par mot de passe.
+     */
+    private AuthResponse googleCreateTenant(GoogleTokenVerifier.GoogleAccount g) {
+        TenantModel created = new TenantModel();
+        created.setFirstName(g.firstName());
+        created.setLastName(g.lastName());
+        created.setEmail(g.email());
+        created.setPassword(randomPassword());
+        tenantRepository.save(created);
+        return new AuthResponse(jwtService.generateToken(g.email(), ROLE_TENANT), g.email(), ROLE_TENANT,
                 created.getFirstName(), created.getLastName());
     }
 
