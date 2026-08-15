@@ -1,6 +1,7 @@
 package com.nancyimmo.bailleur.services;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -22,8 +23,10 @@ import com.nancyimmo.bailleur.repositories.PropertyRepository;
 import com.nancyimmo.bailleur.security.CurrentUser;
 
 /**
- * Portail locataire : expose uniquement les données du bien loué par le locataire connecté
- * (description du bien, situation de compte, etc.). Garantit l'isolation : un locataire ne voit
+ * Portail locataire : expose uniquement les données du bien loué par le
+ * locataire connecté
+ * (description du bien, situation de compte, etc.). Garantit l'isolation : un
+ * locataire ne voit
  * jamais les données d'un autre locataire ni l'espace de gestion du bailleur.
  */
 @Service
@@ -50,7 +53,10 @@ public class PortalService {
         this.currentUser = currentUser;
     }
 
-    /** Le bien actuellement loué par le locataire connecté (avec bail, immeuble, bailleur), ou null. */
+    /**
+     * Le bien actuellement loué par le locataire connecté (avec bail, immeuble,
+     * bailleur), ou null.
+     */
     @Transactional(readOnly = true)
     public PropertyDetailsDto myProperty() {
         LeaseModel lease = currentLeaseWithProperty();
@@ -69,8 +75,10 @@ public class PortalService {
     }
 
     /**
-     * Mois de loyer dus mais non réglés pour le bail du locataire connecté, du début du bail
-     * jusqu'au mois courant. Permet de régulariser les arriérés (status LATE) avant de payer le
+     * Mois de loyer dus mais non réglés pour le bail du locataire connecté, du
+     * début du bail
+     * jusqu'au mois courant. Permet de régulariser les arriérés (status LATE) avant
+     * de payer le
      * mois courant (status CURRENT). Triés du plus ancien au plus récent.
      */
     @Transactional(readOnly = true)
@@ -120,5 +128,31 @@ public class PortalService {
                 .filter(l -> l.getProperty() != null)
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Calcule les mois dus entre le début du bail et le mois courant, hors mois
+     * déjà réglés.
+     */
+    public List<DueMonthDto> computeDues(LocalDate startDate, LocalDate endDate,
+            BigDecimal rent, Set<YearMonth> paidMonths, YearMonth now) {
+        if (startDate == null || rent == null || rent.signum() <= 0) {
+            return List.of();
+        }
+        YearMonth start = YearMonth.from(startDate);
+        YearMonth end = endDate != null ? YearMonth.from(endDate) : now;
+        if (end.isAfter(now)) {
+            end = now;
+        }
+        DateTimeFormatter monthFmt = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH);
+        List<DueMonthDto> dues = new ArrayList<>();
+        for (YearMonth ym = start; !ym.isAfter(end); ym = ym.plusMonths(1)) {
+            if (paidMonths.contains(ym)) {
+                continue;
+            }
+            String status = ym.isBefore(now) ? "LATE" : "CURRENT";
+            dues.add(new DueMonthDto(ym.atDay(1), capitalize(ym.format(monthFmt)), rent, status));
+        }
+        return dues;
     }
 }
