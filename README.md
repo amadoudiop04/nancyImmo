@@ -239,10 +239,6 @@ account type before creating it.
 and `MAIL_PASSWORD` (the 16-character app password). The reset link points to
 `APP_FRONTEND_URL/reset?token=…` and is valid for 30 minutes.
 
-> [!WARNING]
-> Never commit a real `.env` file or any secret. Generate a strong JWT secret, e.g. `openssl rand -base64 48`.
-
----
 
 ## API reference
 
