@@ -4,11 +4,12 @@ import { RouterLink } from '@angular/router';
 import { Observable, of, catchError, switchMap } from 'rxjs';
 import { ApiService, Property, PropertyDetails, Building } from '../../../services/api.service';
 import { ToastService } from '../../../services/toast.service';
+import { ConfirmDialogComponent } from '../../../shared/confirm-dialog.component';
 
 @Component({
   selector: 'app-biens',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ConfirmDialogComponent],
   template: `
     <div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;">
@@ -109,10 +110,8 @@ import { ToastService } from '../../../services/toast.service';
       <!-- Properties grid -->
       <div class="nm-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;">
         @for (p of properties; track p.id) {
-          <div class="nm-card"
-            [style.opacity]="removingId === p.id ? '0' : '1'"
-            [style.transform]="removingId === p.id ? 'scale(0.94)' : 'none'"
-            style="background:#fff;border:1px solid #E4E7E2;border-radius:16px;overflow:hidden;transition:opacity .28s ease,transform .28s ease,box-shadow .18s ease,border-color .18s ease;">
+          <div class="nm-card" [class.nm-card-removing]="removingId === p.id"
+            style="background:#fff;border:1px solid #E4E7E2;border-radius:16px;overflow:hidden;transition:opacity .3s ease,transform .3s cubic-bezier(.4,0,.7,.4),box-shadow .18s ease,border-color .18s ease;">
             <div style="position:relative;height:148px;display:flex;align-items:flex-end;padding:12px;overflow:hidden;"
               [style.background]="p.imageUrl ? '#EDEFEA' : 'repeating-linear-gradient(45deg,#EDEFEA,#EDEFEA 11px,#E4E7E2 11px,#E4E7E2 22px)'">
               @if (p.imageUrl) {
@@ -148,7 +147,7 @@ import { ToastService } from '../../../services/toast.service';
                   style="padding:9px 14px;border:1px solid #D6DED9;border-radius:10px;background:#fff;color:#0E4F4A;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;">
                   Modifier
                 </button>
-                <button (click)="deleteProperty(p.id, p.name)" title="Supprimer"
+                <button (click)="askDelete(p)" title="Supprimer"
                   class="nm-del"
                   style="padding:9px 14px;border:1px solid #D6DED9;border-radius:10px;background:#fff;color:#C2563B;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;">
                   ✕
@@ -165,8 +164,20 @@ import { ToastService } from '../../../services/toast.service';
       </div>
     </div>
 
+    <app-confirm-dialog
+      [open]="pendingDelete !== null"
+      [busy]="deleting"
+      title="Supprimer ce bien ?"
+      [message]="pendingDelete ? '« ' + pendingDelete.name + ' » sera retiré de votre patrimoine. Cette action est définitive.' : ''"
+      confirmLabel="Supprimer"
+      (confirmed)="confirmDelete()"
+      (cancelled)="cancelDelete()" />
+
     <style>
       .nm-card:hover { box-shadow:0 14px 30px rgba(14,79,74,0.10); border-color:#CFE0DA; }
+      /* Sortie de carte : le survol et les clics sont neutralisés le temps de l'animation. */
+      .nm-card-removing { opacity:0; transform:scale(0.92) translateY(-6px); pointer-events:none; }
+      .nm-card-removing:hover { box-shadow:none; border-color:#E4E7E2; }
       .nm-del:hover { background:#FBE7DF; border-color:#E4C8C0; }
       .nm-edit:hover { background:#E7F1EF; border-color:#CFE0DA; }
 
@@ -203,6 +214,9 @@ export class BiensComponent implements OnInit {
   showForm = false;
   error = '';
   removingId: number | null = null;
+  /** Bien en attente de confirmation de suppression (null = boîte fermée). */
+  pendingDelete: PropertyDetails | null = null;
+  deleting = false;
   editingId: number | null = null;
   saving = false;
   newProp: Partial<Property> = { name: '', kind: '', size: '', location: '' };
@@ -360,16 +374,42 @@ export class BiensComponent implements OnInit {
     });
   }
 
-  deleteProperty(id: number, name?: string) {
-    if (!confirm('Supprimer ce bien ?')) return;
-    this.removingId = id;
-    this.api.deleteProperty(id).subscribe({
+  /** Ouvre la boîte de confirmation pour ce bien. */
+  askDelete(p: PropertyDetails) {
+    this.pendingDelete = p;
+  }
+
+  cancelDelete() {
+    this.pendingDelete = null;
+  }
+
+  confirmDelete() {
+    const target = this.pendingDelete;
+    if (!target || this.deleting) return;
+
+    this.deleting = true;
+    this.api.deleteProperty(target.id).subscribe({
       next: () => {
-        this.toast.success(name ? `« ${name} » supprimé` : 'Bien supprimé');
-        // Laisse l'animation de disparition se jouer avant le rechargement.
-        setTimeout(() => { this.removingId = null; this.load(); }, 280);
+        this.deleting = false;
+        // La boîte se ferme d'abord, la carte s'efface ensuite : les deux
+        // animations s'enchaînent au lieu de se superposer.
+        this.pendingDelete = null;
+        this.removingId = target.id;
+        this.toast.success(`« ${target.name} » supprimé`);
+        setTimeout(() => {
+          // Retrait local : la grille se réorganise en une fois, sans attendre
+          // la réponse du rechargement.
+          this.properties = this.properties.filter(p => p.id !== target.id);
+          this.removingId = null;
+          this.load();
+        }, 300);
       },
-      error: () => { this.removingId = null; this.toast.error('Suppression impossible'); }
+      error: () => {
+        this.deleting = false;
+        this.pendingDelete = null;
+        this.removingId = null;
+        this.toast.error('Suppression impossible');
+      }
     });
   }
 
