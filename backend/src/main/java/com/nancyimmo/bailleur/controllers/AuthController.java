@@ -19,6 +19,7 @@ import com.nancyimmo.bailleur.dto.auth.GoogleLoginRequest;
 import com.nancyimmo.bailleur.dto.auth.LoginRequest;
 import com.nancyimmo.bailleur.dto.auth.RegisterRequest;
 import com.nancyimmo.bailleur.dto.auth.ResetPasswordRequest;
+import com.nancyimmo.bailleur.services.AccountTypeRequiredException;
 import com.nancyimmo.bailleur.services.AuthService;
 
 @RestController
@@ -59,11 +60,23 @@ public class AuthController {
         }
     }
 
-    /** Connexion / inscription via Google (ID token vérifié côté serveur). */
+    /**
+     * Connexion / inscription via Google (ID token vérifié côté serveur).
+     *
+     * <p>Pour un email inconnu sans {@code role}, répond 409 avec {@code requiresRole:true} : le
+     * client fait alors choisir le type de compte (bailleur / locataire) et rejoue le même ID token
+     * avec le rôle retenu.
+     */
     @PostMapping("/google")
     public ResponseEntity<?> google(@RequestBody GoogleLoginRequest request) {
         try {
-            return ResponseEntity.ok(authService.loginWithGoogle(request.getIdToken()));
+            return ResponseEntity.ok(authService.loginWithGoogle(request.getIdToken(), request.getRole()));
+        } catch (AccountTypeRequiredException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "requiresRole", true,
+                    "email", e.getEmail(),
+                    "firstName", e.getFirstName() == null ? "" : e.getFirstName(),
+                    "message", e.getMessage()));
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
         }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -76,10 +76,13 @@ import { ToastService } from '../../services/toast.service';
   `
 })
 export class BailleurLayoutComponent {
+  private api = inject(ApiService);
+  private router = inject(Router);
+  private auth = inject(AuthService);
+  private toast = inject(ToastService);
+
   generating = false;
   genMessage = '';
-
-  constructor(private api: ApiService, private router: Router, private auth: AuthService, private toast: ToastService) {}
 
   logout() {
     this.auth.logout();

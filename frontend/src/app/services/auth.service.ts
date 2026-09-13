@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, shareReplay, tap } from 'rxjs';
 
@@ -15,6 +15,8 @@ const USER_KEY = 'nancyimmo_user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private http = inject(HttpClient);
+
   private readonly api = '/api/auth';
 
   // Signal réactif de l'utilisateur courant.
@@ -22,8 +24,6 @@ export class AuthService {
 
   // Cache de la configuration publique (Client ID Google).
   private config$?: Observable<{ googleClientId: string }>;
-
-  constructor(private http: HttpClient) {}
 
   login(email: string, password: string): Observable<AuthUser> {
     return this.http.post<AuthUser>(`${this.api}/login`, { email, password }).pipe(
@@ -39,9 +39,15 @@ export class AuthService {
     );
   }
 
-  /** Connexion / inscription via Google (ID token vérifié côté serveur). Persiste le JWT. */
-  loginWithGoogle(idToken: string): Observable<AuthUser> {
-    return this.http.post<AuthUser>(`${this.api}/google`, { idToken }).pipe(
+  /**
+   * Connexion / inscription via Google (ID token vérifié côté serveur). Persiste le JWT.
+   *
+   * `role` ne sert que pour un email inconnu : il décide du type de compte créé. Sans rôle, un email
+   * inconnu renvoie une erreur 409 `{ requiresRole: true }` — il faut alors faire choisir le type de
+   * compte à l'utilisateur et rappeler cette méthode avec le même `idToken`.
+   */
+  loginWithGoogle(idToken: string, role?: 'BAILLEUR' | 'LOCATAIRE'): Observable<AuthUser> {
+    return this.http.post<AuthUser>(`${this.api}/google`, { idToken, role }).pipe(
       tap(res => this.persist(res))
     );
   }

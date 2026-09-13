@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService, DashboardStats } from '../../services/api.service';
 
@@ -131,6 +131,8 @@ import { ApiService, DashboardStats } from '../../services/api.service';
   `
 })
 export class AccueilComponent implements OnInit {
+  private api = inject(ApiService);
+
   stats: DashboardStats | null = null;
   barHeights = [46, 62, 54, 74, 66, 88, 100];
 
@@ -138,8 +140,6 @@ export class AccueilComponent implements OnInit {
     if (!this.stats) return '—';
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(this.stats.monthlyRevenue);
   }
-
-  constructor(private api: ApiService) {}
 
   ngOnInit() {
     this.api.getDashboardStats().subscribe({ next: s => this.stats = s, error: () => {} });

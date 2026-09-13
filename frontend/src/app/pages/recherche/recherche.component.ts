@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, PropertyDetails } from '../../services/api.service';
 import { ToastService } from '../../services/toast.service';
@@ -109,9 +109,9 @@ import { ToastService } from '../../services/toast.service';
 
       <!-- Candidature : formulaire de dossier -->
       @if (candidature) {
-        <div (click)="closeDossier()"
+        <div (click)="onBackdropClick($event)" role="presentation"
           style="position:fixed;inset:0;background:rgba(22,32,29,0.55);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;">
-          <div (click)="$event.stopPropagation()"
+          <div role="dialog" aria-modal="true"
             style="background:#fff;border-radius:18px;max-width:460px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 30px 70px rgba(0,0,0,0.3);animation:nm-pop .26s cubic-bezier(.2,.8,.2,1);">
 
             @if (submitted) {
@@ -135,24 +135,24 @@ import { ToastService } from '../../services/toast.service';
               <form (ngSubmit)="submitDossier()" style="padding:24px 26px;">
                 <div class="nm-form" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                   <div>
-                    <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Prénom</label>
-                    <input [(ngModel)]="dossier.firstName" name="firstName" required
+                    <label for="dossier-firstname" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Prénom</label>
+                    <input id="dossier-firstname" [(ngModel)]="dossier.firstName" name="firstName" required
                       style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
                   </div>
                   <div>
-                    <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom</label>
-                    <input [(ngModel)]="dossier.lastName" name="lastName" required
+                    <label for="dossier-lastname" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom</label>
+                    <input id="dossier-lastname" [(ngModel)]="dossier.lastName" name="lastName" required
                       style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
                   </div>
                 </div>
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin:12px 0 6px;display:block;">Email</label>
-                <input [(ngModel)]="dossier.email" name="email" type="email" required
+                <label for="dossier-email" style="font-size:12.5px;font-weight:600;color:#5A655F;margin:12px 0 6px;display:block;">Email</label>
+                <input id="dossier-email" [(ngModel)]="dossier.email" name="email" type="email" required
                   style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin:12px 0 6px;display:block;">Téléphone</label>
-                <input [(ngModel)]="dossier.phone" name="phone"
+                <label for="dossier-phone" style="font-size:12.5px;font-weight:600;color:#5A655F;margin:12px 0 6px;display:block;">Téléphone</label>
+                <input id="dossier-phone" [(ngModel)]="dossier.phone" name="phone"
                   style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin:12px 0 6px;display:block;">Message (revenus, garants…)</label>
-                <textarea [(ngModel)]="dossier.message" name="message" rows="3"
+                <label for="dossier-message" style="font-size:12.5px;font-weight:600;color:#5A655F;margin:12px 0 6px;display:block;">Message (revenus, garants…)</label>
+                <textarea id="dossier-message" [(ngModel)]="dossier.message" name="message" rows="3"
                   style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;resize:vertical;"></textarea>
 
                 @if (dossierError) { <p style="color:#C2563B;font-size:13px;margin:12px 0 0;">{{ dossierError }}</p> }
@@ -181,6 +181,9 @@ import { ToastService } from '../../services/toast.service';
   `
 })
 export class RechercheComponent implements OnInit {
+  private api = inject(ApiService);
+  private toast = inject(ToastService);
+
   all: PropertyDetails[] = [];
   filtered: PropertyDetails[] = [];
   kinds: string[] = [];
@@ -194,8 +197,6 @@ export class RechercheComponent implements OnInit {
   submitted = false;
   sending = false;
   dossierError = '';
-
-  constructor(private api: ApiService, private toast: ToastService) {}
 
   ngOnInit() {
     this.api.getAvailableProperties().subscribe({
@@ -254,6 +255,16 @@ export class RechercheComponent implements OnInit {
   closeDossier() {
     this.candidature = null;
     this.submitted = false;
+  }
+
+  /** Ferme la modale au clic sur le fond, sans intercepter les clics du panneau. */
+  onBackdropClick(event: MouseEvent) {
+    if (event.target === event.currentTarget) this.closeDossier();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    if (this.candidature) this.closeDossier();
   }
 
   parseSurface(size?: string): number {

@@ -44,8 +44,14 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints publics
+                        // /swagger-ui.html redirige vers /swagger-ui/index.html : les deux
+                        // doivent être ouverts, le pattern /swagger-ui/** ne couvrant pas le .html.
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/", "/error", "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/properties/available").permitAll()
+                        // Photos des biens : affichées dans les annonces publiques, et une
+                        // balise <img> ne peut pas porter l'en-tête Authorization.
+                        .requestMatchers(HttpMethod.GET, "/api/properties/*/photo").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/dashboard").permitAll()
                         // Un candidat peut déposer un dossier sans compte
                         .requestMatchers(HttpMethod.POST, "/api/applications").permitAll()

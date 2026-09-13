@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
@@ -70,9 +70,9 @@ export interface Application {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly api = '/api';
+  private http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {}
+  private readonly api = '/api';
 
   // Buildings
   getBuildings(): Observable<Building[]> { return this.http.get<Building[]>(`${this.api}/buildings`); }
@@ -88,6 +88,12 @@ export class ApiService {
   createProperty(p: Omit<Property, 'id'>): Observable<Property> { return this.http.post<Property>(`${this.api}/properties`, p); }
   updateProperty(id: number, p: Partial<Property>): Observable<Property> { return this.http.put<Property>(`${this.api}/properties/${id}`, p); }
   deleteProperty(id: number): Observable<void> { return this.http.delete<void>(`${this.api}/properties/${id}`); }
+  uploadPropertyPhoto(id: number, file: File): Observable<Property> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<Property>(`${this.api}/properties/${id}/photo`, form);
+  }
+  deletePropertyPhoto(id: number): Observable<Property> { return this.http.delete<Property>(`${this.api}/properties/${id}/photo`); }
 
   // Tenants
   getTenants(): Observable<Tenant[]> { return this.http.get<Tenant[]>(`${this.api}/tenants`); }

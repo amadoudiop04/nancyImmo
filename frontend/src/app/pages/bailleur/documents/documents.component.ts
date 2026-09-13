@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Document, PropertyDetails, Tenant, Lease } from '../../../services/api.service';
 import { ToastService } from '../../../services/toast.service';
@@ -40,8 +40,8 @@ import { ToastService } from '../../../services/toast.service';
           } @else {
             <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
               <div style="flex:1;min-width:260px;">
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Bail</label>
-                <select [(ngModel)]="selectedLeaseId"
+                <label for="bail-lease" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Bail</label>
+                <select id="bail-lease" [(ngModel)]="selectedLeaseId"
                   style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;">
                   <option [ngValue]="null">— Choisir un bail —</option>
                   @for (l of leases; track l.id) {
@@ -68,8 +68,8 @@ import { ToastService } from '../../../services/toast.service';
           } @else {
             <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
               <div style="flex:1;min-width:240px;">
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Bail</label>
-                <select [(ngModel)]="quittanceLeaseId"
+                <label for="quittance-lease" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Bail</label>
+                <select id="quittance-lease" [(ngModel)]="quittanceLeaseId"
                   style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;">
                   <option [ngValue]="null">— Choisir un bail —</option>
                   @for (l of leases; track l.id) {
@@ -78,8 +78,8 @@ import { ToastService } from '../../../services/toast.service';
                 </select>
               </div>
               <div>
-                <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Mois</label>
-                <input type="month" [(ngModel)]="quittanceMonth"
+                <label for="quittance-month" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Mois</label>
+                <input id="quittance-month" type="month" [(ngModel)]="quittanceMonth"
                   style="padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;">
               </div>
               <button (click)="generateQuittance()" [disabled]="!quittanceLeaseId || !quittanceMonth || working"
@@ -97,13 +97,13 @@ import { ToastService } from '../../../services/toast.service';
           <h2 style="margin:0 0 16px;font-size:16px;font-weight:700;">Importer une pièce justificative</h2>
           <div class="nm-form" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;">
             <div style="grid-column:1/3;">
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom (optionnel)</label>
-              <input [(ngModel)]="newDoc.name" placeholder="Pièce d'identité — Thomas Bernard"
+              <label for="doc-name" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Nom (optionnel)</label>
+              <input id="doc-name" [(ngModel)]="newDoc.name" placeholder="Pièce d'identité — Thomas Bernard"
                 style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
             </div>
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Type</label>
-              <select [(ngModel)]="newDoc.docType"
+              <label for="doc-type" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Type</label>
+              <select id="doc-type" [(ngModel)]="newDoc.docType"
                 style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;">
                 <option value="IDENTITY">Pièce d'identité</option>
                 <option value="LEASE">Bail</option>
@@ -112,8 +112,8 @@ import { ToastService } from '../../../services/toast.service';
               </select>
             </div>
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Lié au locataire</label>
-              <select [(ngModel)]="newDoc.tenantId"
+              <label for="doc-tenant" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Lié au locataire</label>
+              <select id="doc-tenant" [(ngModel)]="newDoc.tenantId"
                 style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;">
                 <option [ngValue]="undefined">— Aucun —</option>
                 @for (t of tenants; track t.id) {
@@ -122,8 +122,8 @@ import { ToastService } from '../../../services/toast.service';
               </select>
             </div>
             <div>
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Lié au bien</label>
-              <select [(ngModel)]="newDoc.propertyId"
+              <label for="doc-property" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Lié au bien</label>
+              <select id="doc-property" [(ngModel)]="newDoc.propertyId"
                 style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;">
                 <option [ngValue]="undefined">— Aucun —</option>
                 @for (p of properties; track p.id) {
@@ -132,8 +132,8 @@ import { ToastService } from '../../../services/toast.service';
               </select>
             </div>
             <div style="grid-column:1/5;">
-              <label style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Fichier (PDF, image…)</label>
-              <input type="file" (change)="onFileSelected($event)"
+              <label for="doc-file" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Fichier (PDF, image…)</label>
+              <input id="doc-file" type="file" (change)="onFileSelected($event)"
                 accept=".pdf,.png,.jpg,.jpeg,.webp"
                 style="width:100%;padding:10px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;background:#fff;outline:none;">
               @if (selectedFile) {
@@ -197,12 +197,15 @@ import { ToastService } from '../../../services/toast.service';
   `
 })
 export class DocumentsComponent implements OnInit {
+  private api = inject(ApiService);
+  private toast = inject(ToastService);
+
   documents: Document[] = [];
   properties: PropertyDetails[] = [];
   tenants: Tenant[] = [];
   leases: Lease[] = [];
   panel: 'upload' | 'bail' | 'quittance' | null = null;
-  newDoc: any = { docType: 'IDENTITY' };
+  newDoc: Partial<Document> = { docType: 'IDENTITY' };
   selectedFile: File | null = null;
   selectedLeaseId: number | null = null;
   quittanceLeaseId: number | null = null;
@@ -217,8 +220,6 @@ export class DocumentsComponent implements OnInit {
     { value: 'IDENTITY', label: 'Identité' },
     { value: 'OTHER', label: 'Autres' },
   ];
-
-  constructor(private api: ApiService, private toast: ToastService) {}
 
   get visibleDocuments(): Document[] {
     if (this.activeType === 'ALL') return this.documents;

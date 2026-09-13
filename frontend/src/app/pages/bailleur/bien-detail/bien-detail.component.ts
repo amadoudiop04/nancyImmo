@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService, PropertyDetails, Document, Lease, Tenant } from '../../../services/api.service';
@@ -91,20 +91,20 @@ import { ToastService } from '../../../services/toast.service';
                 <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Créer un bail</div>
                 <div class="nm-form" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                   <div>
-                    <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Date de début</label>
-                    <input type="date" [(ngModel)]="newLease.startDate" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
+                    <label for="new-lease-start" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Date de début</label>
+                    <input id="new-lease-start" type="date" [(ngModel)]="newLease.startDate" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
                   </div>
                   <div>
-                    <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Date de fin</label>
-                    <input type="date" [(ngModel)]="newLease.endDate" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
+                    <label for="new-lease-end" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Date de fin</label>
+                    <input id="new-lease-end" type="date" [(ngModel)]="newLease.endDate" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
                   </div>
                   <div>
-                    <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Loyer (€)</label>
-                    <input type="number" [(ngModel)]="newLease.rentAmount" placeholder="800" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
+                    <label for="new-lease-rent" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Loyer (€)</label>
+                    <input id="new-lease-rent" type="number" [(ngModel)]="newLease.rentAmount" placeholder="800" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
                   </div>
                   <div>
-                    <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Locataire</label>
-                    <select [(ngModel)]="newLease.tenantId" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;background:#fff;">
+                    <label for="new-lease-tenant" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Locataire</label>
+                    <select id="new-lease-tenant" [(ngModel)]="newLease.tenantId" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;background:#fff;">
                       <option [value]="undefined">— Sélectionner —</option>
                       @for (t of tenants; track t.id) {
                         <option [value]="t.id">{{ t.firstName }} {{ t.lastName }}</option>
@@ -171,16 +171,16 @@ import { ToastService } from '../../../services/toast.service';
                 } @else {
                   <div style="display:flex;flex-direction:column;gap:11px;">
                     <div>
-                      <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Loyer (€)</label>
-                      <input type="number" [(ngModel)]="leaseEdit.rentAmount" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
+                      <label for="edit-lease-rent" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Loyer (€)</label>
+                      <input id="edit-lease-rent" type="number" [(ngModel)]="leaseEdit.rentAmount" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
                     </div>
                     <div>
-                      <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Date de début</label>
-                      <input type="date" [(ngModel)]="leaseEdit.startDate" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
+                      <label for="edit-lease-start" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Date de début</label>
+                      <input id="edit-lease-start" type="date" [(ngModel)]="leaseEdit.startDate" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
                     </div>
                     <div>
-                      <label style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Date de fin</label>
-                      <input type="date" [(ngModel)]="leaseEdit.endDate" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
+                      <label for="edit-lease-end" style="font-size:12px;font-weight:600;color:#5A655F;margin-bottom:5px;display:block;">Date de fin</label>
+                      <input id="edit-lease-end" type="date" [(ngModel)]="leaseEdit.endDate" style="width:100%;padding:9px 12px;border:1px solid #D6DED9;border-radius:8px;font-family:inherit;font-size:13px;">
                     </div>
                   </div>
                   <div style="display:flex;gap:9px;margin-top:14px;">
@@ -205,17 +205,19 @@ import { ToastService } from '../../../services/toast.service';
   `
 })
 export class BiensDetailComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private api = inject(ApiService);
+  private toast = inject(ToastService);
+
   property: PropertyDetails | null = null;
   documents: Document[] = [];
   tenants: Tenant[] = [];
   showDocForm = false;
-  newDoc: any = { name: '', docType: 'OTHER' };
-  newLease: any = { startDate: '', endDate: '', rentAmount: 0, currency: 'EUR' };
+  newDoc: Partial<Document> = { name: '', docType: 'OTHER' };
+  newLease: Partial<Lease> = { startDate: '', endDate: '', rentAmount: 0, currency: 'EUR' };
   editingLease = false;
-  leaseEdit: any = { startDate: '', endDate: '', rentAmount: 0 };
+  leaseEdit: Partial<Lease> = { startDate: '', endDate: '', rentAmount: 0 };
   propertyId!: number;
-
-  constructor(private route: ActivatedRoute, private api: ApiService, private toast: ToastService) {}
 
   ngOnInit() {
     this.propertyId = +this.route.snapshot.paramMap.get('id')!;
@@ -231,7 +233,7 @@ export class BiensDetailComponent implements OnInit {
   addDoc() { this.showDocForm = true; this.newDoc = { name: '', docType: 'OTHER' }; }
 
   saveDoc() {
-    this.api.createDocument({ ...this.newDoc, propertyId: this.propertyId, createdAt: new Date().toISOString().slice(0, 10) } as any).subscribe({
+    this.api.createDocument({ ...this.newDoc, propertyId: this.propertyId, createdAt: new Date().toISOString().slice(0, 10) } as Omit<Document, 'id'>).subscribe({
       next: () => {
         this.showDocForm = false;
         this.api.getDocuments({ propertyId: this.propertyId }).subscribe({ next: d => this.documents = d, error: () => {} });
@@ -248,7 +250,7 @@ export class BiensDetailComponent implements OnInit {
   }
 
   createLease() {
-    this.api.createLease({ ...this.newLease, propertyId: this.propertyId }).subscribe({
+    this.api.createLease({ ...this.newLease, propertyId: this.propertyId } as Omit<Lease, 'id'>).subscribe({
       next: () => { this.toast.success('Bail créé'); this.load(); },
       error: () => this.toast.error('Impossible de créer le bail')
     });

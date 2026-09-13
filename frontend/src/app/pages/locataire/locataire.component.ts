@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService, PropertyDetails, Payment, Document, StatementLine, DueMonth } from '../../services/api.service';
@@ -145,6 +145,12 @@ import { ToastService } from '../../services/toast.service';
   `
 })
 export class LocataireComponent implements OnInit {
+  private api = inject(ApiService);
+  private auth = inject(AuthService);
+  private toast = inject(ToastService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
   currentProperty: PropertyDetails | null = null;
   payments: Payment[] = [];
   documents: Document[] = [];
@@ -163,14 +169,6 @@ export class LocataireComponent implements OnInit {
   get lateTotal(): number {
     return this.lateDues.reduce((sum, d) => sum + (d.amount ?? 0), 0);
   }
-
-  constructor(
-    private api: ApiService,
-    private auth: AuthService,
-    private toast: ToastService,
-    private route: ActivatedRoute,
-    private router: Router,
-  ) {}
 
   get userName(): string {
     const u = this.auth.user;

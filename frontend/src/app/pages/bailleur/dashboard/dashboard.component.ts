@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService, DashboardStats, PropertyDetails } from '../../../services/api.service';
 import { AuthService } from '../../../services/auth.service';
@@ -85,6 +85,9 @@ import { AuthService } from '../../../services/auth.service';
   `
 })
 export class DashboardComponent implements OnInit {
+  private api = inject(ApiService);
+  private auth = inject(AuthService);
+
   stats: DashboardStats | null = null;
   properties: PropertyDetails[] = [];
 
@@ -94,8 +97,6 @@ export class DashboardComponent implements OnInit {
   animOccupancy = 0;
 
   private colors = ['#0E4F4A', '#2A9D8F', '#264653', '#E76F51', '#E9C46A'];
-
-  constructor(private api: ApiService, private auth: AuthService) {}
 
   get landlordName(): string {
     const u = this.auth.user;
