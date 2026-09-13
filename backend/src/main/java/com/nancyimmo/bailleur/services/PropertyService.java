@@ -1,7 +1,13 @@
 package com.nancyimmo.bailleur.services;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,12 +17,14 @@ import com.nancyimmo.bailleur.models.BuildingModel;
 import com.nancyimmo.bailleur.models.LandlordModel;
 import com.nancyimmo.bailleur.models.LeaseModel;
 import com.nancyimmo.bailleur.models.PropertyModel;
+import com.nancyimmo.bailleur.models.PropertyPhotoModel;
 import com.nancyimmo.bailleur.models.TenantModel;
 import com.nancyimmo.bailleur.repositories.BuildingRepository;
 import com.nancyimmo.bailleur.repositories.DocumentRepository;
 import com.nancyimmo.bailleur.repositories.LandlordRepository;
 import com.nancyimmo.bailleur.repositories.LeaseRepository;
 import com.nancyimmo.bailleur.repositories.PaymentRepository;
+import com.nancyimmo.bailleur.repositories.PropertyPhotoRepository;
 import com.nancyimmo.bailleur.repositories.PropertyRepository;
 import com.nancyimmo.bailleur.security.CurrentUser;
 
@@ -29,6 +37,8 @@ public class PropertyService {
     private final DocumentRepository documentRepository;
     private final LeaseRepository leaseRepository;
     private final PaymentRepository paymentRepository;
+    private final PropertyPhotoRepository propertyPhotoRepository;
+    private final ImageService imageService;
     private final CurrentUser currentUser;
 
     public PropertyService(PropertyRepository propertyRepository,
@@ -37,6 +47,8 @@ public class PropertyService {
             DocumentRepository documentRepository,
             LeaseRepository leaseRepository,
             PaymentRepository paymentRepository,
+            PropertyPhotoRepository propertyPhotoRepository,
+            ImageService imageService,
             CurrentUser currentUser) {
         this.propertyRepository = propertyRepository;
         this.buildingRepository = buildingRepository;
@@ -44,6 +56,8 @@ public class PropertyService {
         this.documentRepository = documentRepository;
         this.leaseRepository = leaseRepository;
         this.paymentRepository = paymentRepository;
+        this.propertyPhotoRepository = propertyPhotoRepository;
+        this.imageService = imageService;
         this.currentUser = currentUser;
     }
 
@@ -136,6 +150,7 @@ public class PropertyService {
         }
         // Supprime d'abord les enregistrements dépendants pour éviter les violations de clé étrangère.
         documentRepository.deleteAll(documentRepository.findByPropertyId(id));
+        propertyPhotoRepository.deleteByPropertyId(id);
 
         leaseRepository.findByPropertyId(id).ifPresent(lease -> {
             paymentRepository.deleteAll(paymentRepository.findByLeaseId(lease.getId()));
@@ -146,6 +161,70 @@ public class PropertyService {
         });
 
         propertyRepository.deleteById(id);
+    }
+
+    // ─── Photo du bien ────────────────────────────────────────────────────────
+
+    /**
+     * Enregistre la photo uploadée pour un bien du bailleur connecté et pointe
+     * {@code imageUrl} vers l'endpoint de service de l'image. L'horodatage en
+     * paramètre force le rafraîchissement du cache navigateur à chaque remplacement.
+     */
+    @Transactional
+    public PropertyDto uploadPhoto(Long id, MultipartFile file) {
+        PropertyModel property = propertyRepository.findByIdAndLandlord_Email(id, currentUser.requireEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bien introuvable."));
+
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fichier manquant.");
+        }
+        if (file.getSize() > ImageService.MAX_UPLOAD_BYTES) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Image trop volumineuse (5 Mo maximum).");
+        }
+        String contentType = file.getContentType() != null ? file.getContentType().toLowerCase() : "";
+        if (!ImageService.ALLOWED_TYPES.contains(contentType)) {
+            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                    "Format non supporté. Formats acceptés : JPEG, PNG, GIF, WebP.");
+        }
+
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lecture du fichier impossible.");
+        }
+        ImageService.Normalized normalized = imageService.normalize(bytes, contentType);
+
+        PropertyPhotoModel photo = propertyPhotoRepository.findByPropertyId(id)
+                .orElseGet(PropertyPhotoModel::new);
+        photo.setPropertyId(id);
+        photo.setContent(normalized.content());
+        photo.setContentType(normalized.contentType());
+        photo.setFileName(file.getOriginalFilename());
+        photo.setUpdatedAt(Instant.now());
+        propertyPhotoRepository.save(photo);
+
+        property.setImageUrl("/api/properties/" + id + "/photo?v=" + photo.getUpdatedAt().toEpochMilli());
+        return toDto(propertyRepository.save(property));
+    }
+
+    /** Retire la photo d'un bien du bailleur connecté. */
+    @Transactional
+    public PropertyDto deletePhoto(Long id) {
+        PropertyModel property = propertyRepository.findByIdAndLandlord_Email(id, currentUser.requireEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bien introuvable."));
+        propertyPhotoRepository.deleteByPropertyId(id);
+        property.setImageUrl(null);
+        return toDto(propertyRepository.save(property));
+    }
+
+    /**
+     * Photo d'un bien pour affichage. Volontairement sans filtre sur le bailleur :
+     * les annonces (page de recherche publique) affichent ces images.
+     */
+    public PropertyPhotoModel getPhoto(Long id) {
+        return propertyPhotoRepository.findByPropertyId(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo introuvable."));
     }
 
     private PropertyDto toDto(PropertyModel model) {

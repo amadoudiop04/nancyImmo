@@ -88,6 +88,12 @@ export class ApiService {
   createProperty(p: Omit<Property, 'id'>): Observable<Property> { return this.http.post<Property>(`${this.api}/properties`, p); }
   updateProperty(id: number, p: Partial<Property>): Observable<Property> { return this.http.put<Property>(`${this.api}/properties/${id}`, p); }
   deleteProperty(id: number): Observable<void> { return this.http.delete<void>(`${this.api}/properties/${id}`); }
+  uploadPropertyPhoto(id: number, file: File): Observable<Property> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<Property>(`${this.api}/properties/${id}/photo`, form);
+  }
+  deletePropertyPhoto(id: number): Observable<Property> { return this.http.delete<Property>(`${this.api}/properties/${id}/photo`); }
 
   // Tenants
   getTenants(): Observable<Tenant[]> { return this.http.get<Tenant[]>(`${this.api}/tenants`); }

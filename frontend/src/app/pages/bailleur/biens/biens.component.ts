@@ -1,6 +1,7 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Observable, of, catchError, switchMap } from 'rxjs';
 import { ApiService, Property, PropertyDetails, Building } from '../../../services/api.service';
 import { ToastService } from '../../../services/toast.service';
 
@@ -56,11 +57,32 @@ import { ToastService } from '../../../services/toast.service';
               </select>
             </div>
             <div style="grid-column:1/3;">
-              <label for="prop-image" style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:6px;display:block;">Photo du bien (URL)</label>
-              <input id="prop-image" [(ngModel)]="newProp.imageUrl" placeholder="https://… (lien vers une image)"
-                style="width:100%;padding:11px 13px;border:1px solid #D6DED9;border-radius:10px;font-family:inherit;font-size:14px;outline:none;">
-              @if (newProp.imageUrl) {
-                <img [src]="newProp.imageUrl" alt="aperçu" style="margin-top:10px;width:100%;max-height:160px;object-fit:cover;border-radius:10px;border:1px solid #E4E7E2;">
+              <div style="font-size:12.5px;font-weight:600;color:#5A655F;margin-bottom:8px;">Photo du bien</div>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <input id="prop-photo" #photoInput type="file" class="nm-file-input"
+                  accept="image/jpeg,image/png,image/gif,image/webp" (change)="onPhotoSelected($event)">
+                <label for="prop-photo" class="nm-file">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="2.5" />
+                    <circle cx="8.8" cy="8.8" r="1.6" />
+                    <path d="M21 14.5 16 9.5 5.5 20" />
+                  </svg>
+                  {{ photoPreview ? 'Changer la photo' : 'Choisir une photo' }}
+                </label>
+                <span style="font-size:12.5px;color:#8A938E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ photoStatus }}</span>
+              </div>
+              <p style="margin:8px 0 0;font-size:11.5px;color:#9AA49E;">JPEG, PNG, GIF ou WebP — 5 Mo maximum.</p>
+              @if (photoError) { <p style="color:#C2563B;margin:6px 0 0;font-size:12.5px;">{{ photoError }}</p> }
+              @if (photoPreview) {
+                <div style="position:relative;margin-top:10px;">
+                  <img [src]="photoPreview" alt="Aperçu de la photo du bien"
+                    style="display:block;width:100%;max-height:200px;object-fit:cover;border-radius:10px;border:1px solid #E4E7E2;">
+                  <button type="button" (click)="removePhoto()" class="nm-del"
+                    style="position:absolute;top:10px;right:10px;padding:7px 13px;border:1px solid #E4E7E2;border-radius:9px;background:rgba(255,255,255,0.94);color:#C2563B;font-family:inherit;font-weight:600;font-size:12.5px;cursor:pointer;">
+                    Retirer la photo
+                  </button>
+                </div>
               }
             </div>
             <div style="grid-column:1/3;">
@@ -70,9 +92,10 @@ import { ToastService } from '../../../services/toast.service';
             </div>
           </div>
           <div style="display:flex;gap:10px;margin-top:16px;">
-            <button (click)="saveProperty()"
+            <button (click)="saveProperty()" [disabled]="saving"
+              [style.opacity]="saving ? '0.6' : '1'"
               style="padding:11px 22px;border:none;border-radius:10px;background:#0E4F4A;color:#fff;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;">
-              {{ editingId ? 'Enregistrer les modifications' : 'Enregistrer' }}
+              {{ saving ? 'Enregistrement…' : (editingId ? 'Enregistrer les modifications' : 'Enregistrer') }}
             </button>
             <button (click)="cancelForm()"
               style="padding:11px 22px;border:1px solid #D6DED9;border-radius:10px;background:#fff;color:#16201D;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;">
@@ -146,12 +169,33 @@ import { ToastService } from '../../../services/toast.service';
       .nm-card:hover { box-shadow:0 14px 30px rgba(14,79,74,0.10); border-color:#CFE0DA; }
       .nm-del:hover { background:#FBE7DF; border-color:#E4C8C0; }
       .nm-edit:hover { background:#E7F1EF; border-color:#CFE0DA; }
+
+      /* Le champ fichier natif est masqué : c'est le label .nm-file qui sert de bouton.
+         Masquage accessible (et non display:none) pour que le focus clavier reste possible. */
+      .nm-file-input {
+        position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+        overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+      }
+      .nm-file {
+        display:inline-flex; align-items:center; gap:8px;
+        padding:10px 16px; border:1px solid #D6DED9; border-radius:10px;
+        background:#fff; color:#0E4F4A;
+        font-family:inherit; font-weight:600; font-size:13.5px;
+        cursor:pointer; user-select:none;
+        transition:background .15s ease, border-color .15s ease, box-shadow .15s ease;
+      }
+      .nm-file:hover { background:#E7F1EF; border-color:#CFE0DA; }
+      .nm-file:active { background:#DCEAE6; }
+      .nm-file svg { flex-shrink:0; opacity:0.75; }
+      .nm-file-input:focus-visible + .nm-file { border-color:#0E4F4A; box-shadow:0 0 0 3px rgba(14,79,74,0.16); }
     </style>
   `
 })
 export class BiensComponent implements OnInit {
   private api = inject(ApiService);
   private toast = inject(ToastService);
+
+  @ViewChild('photoInput') photoInput?: ElementRef<HTMLInputElement>;
 
   properties: PropertyDetails[] = [];
   buildings: Building[] = [];
@@ -160,15 +204,86 @@ export class BiensComponent implements OnInit {
   error = '';
   removingId: number | null = null;
   editingId: number | null = null;
+  saving = false;
   newProp: Partial<Property> = { name: '', kind: '', size: '', location: '' };
 
+  // Photo : fichier choisi, aperçu affiché, et suppression demandée de la photo existante.
+  photoFile: File | null = null;
+  photoPreview: string | null = null;
+  photoCleared = false;
+  photoError = '';
+
+  private static readonly PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  private static readonly PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+
+  /** Texte affiché à côté du bouton : nom du fichier choisi, ou état courant. */
+  get photoStatus(): string {
+    if (this.photoFile) return this.photoFile.name;
+    if (this.photoPreview) return 'Photo actuelle';
+    return 'Aucun fichier sélectionné';
+  }
+
   private emptyProp(): Partial<Property> {
-    return { name: '', kind: '', size: '', location: '', rent: undefined, description: '', imageUrl: '', buildingId: undefined };
+    // imageUrl est absent volontairement : la photo passe par ses propres endpoints,
+    // et le backend conserve la valeur existante quand le champ n'est pas transmis.
+    return { name: '', kind: '', size: '', location: '', rent: undefined, description: '', buildingId: undefined };
+  }
+
+  /** Libère l'aperçu local et remet l'état photo à zéro. */
+  private resetPhoto() {
+    if (this.photoPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.photoPreview);
+    }
+    this.photoFile = null;
+    this.photoPreview = null;
+    this.photoCleared = false;
+    this.photoError = '';
+    if (this.photoInput) this.photoInput.nativeElement.value = '';
+  }
+
+  onPhotoSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!BiensComponent.PHOTO_TYPES.includes(file.type)) {
+      this.photoError = 'Format non supporté. Choisissez une image JPEG, PNG, GIF ou WebP.';
+      input.value = '';
+      return;
+    }
+    if (file.size > BiensComponent.PHOTO_MAX_BYTES) {
+      this.photoError = 'Image trop volumineuse (5 Mo maximum).';
+      input.value = '';
+      return;
+    }
+
+    if (this.photoPreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.photoPreview);
+    }
+    this.photoFile = file;
+    this.photoPreview = URL.createObjectURL(file);
+    this.photoCleared = false;
+    this.photoError = '';
+  }
+
+  removePhoto() {
+    const wasEditing = this.editingId !== null;
+    this.resetPhoto();
+    // En modification, la photo déjà enregistrée doit être supprimée côté serveur.
+    this.photoCleared = wasEditing;
+  }
+
+  /** Applique le changement de photo une fois le bien enregistré. */
+  private syncPhoto(propertyId: number): Observable<unknown> {
+    if (this.photoFile) return this.api.uploadPropertyPhoto(propertyId, this.photoFile);
+    if (this.photoCleared) return this.api.deletePropertyPhoto(propertyId);
+    return of(null);
   }
 
   openCreate() {
     this.editingId = null;
     this.error = '';
+    this.resetPhoto();
     this.newProp = this.emptyProp();
     this.showForm = !this.showForm;
   }
@@ -178,9 +293,12 @@ export class BiensComponent implements OnInit {
     this.error = '';
     this.newProp = {
       name: p.name, kind: p.kind, size: p.size, location: p.location,
-      rent: p.rent ?? p.lease?.rentAmount, description: p.description, imageUrl: p.imageUrl,
+      rent: p.rent ?? p.lease?.rentAmount, description: p.description,
       buildingId: p.building?.id,
     };
+    this.resetPhoto();
+    // Aperçu de la photo déjà enregistrée, tant qu'aucun nouveau fichier n'est choisi.
+    this.photoPreview = p.imageUrl ?? null;
     this.showForm = true;
     // Le formulaire est en haut de la page : on y remonte pour qu'il soit visible.
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 0);
@@ -189,6 +307,7 @@ export class BiensComponent implements OnInit {
   cancelForm() {
     this.showForm = false;
     this.editingId = null;
+    this.resetPhoto();
     this.newProp = this.emptyProp();
     this.error = '';
   }
@@ -197,17 +316,35 @@ export class BiensComponent implements OnInit {
     this.error = '';
     if (!this.newProp.name) { this.error = 'Le nom est requis.'; return; }
 
-    if (this.editingId) {
-      this.api.updateProperty(this.editingId, this.newProp).subscribe({
-        next: () => { this.cancelForm(); this.toast.success('Bien modifié'); this.load(); },
-        error: () => { this.error = 'Erreur lors de la modification.'; this.toast.error('Impossible de modifier le bien'); }
-      });
-    } else {
-      this.api.createProperty(this.newProp as Omit<Property, 'id'>).subscribe({
-        next: () => { this.cancelForm(); this.toast.success('Bien ajouté'); this.load(); },
-        error: () => { this.error = 'Erreur lors de la création.'; this.toast.error('Impossible d\'ajouter le bien'); }
-      });
-    }
+    const isEdit = this.editingId !== null;
+    // La photo s'envoie après coup : à la création, l'identifiant du bien n'existe pas encore.
+    const saved$ = isEdit
+      ? this.api.updateProperty(this.editingId as number, this.newProp)
+      : this.api.createProperty(this.newProp as Omit<Property, 'id'>);
+
+    let photoFailed = false;
+    this.saving = true;
+    saved$.pipe(
+      switchMap(saved => this.syncPhoto(saved.id).pipe(
+        catchError(() => { photoFailed = true; return of(null); })
+      ))
+    ).subscribe({
+      next: () => {
+        this.saving = false;
+        this.cancelForm();
+        if (photoFailed) {
+          this.toast.error('Bien enregistré, mais l\'envoi de la photo a échoué');
+        } else {
+          this.toast.success(isEdit ? 'Bien modifié' : 'Bien ajouté');
+        }
+        this.load();
+      },
+      error: () => {
+        this.saving = false;
+        this.error = isEdit ? 'Erreur lors de la modification.' : 'Erreur lors de la création.';
+        this.toast.error(isEdit ? 'Impossible de modifier le bien' : 'Impossible d\'ajouter le bien');
+      }
+    });
   }
 
   ngOnInit() {

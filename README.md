@@ -263,9 +263,11 @@ Base path: `/api`. All responses are JSON. Protected endpoints expect an
 | Method | Path | Access |
 |--------|------|--------|
 | GET | `/available` | **Public** — available properties (search) |
+| GET | `/{id}/photo` | **Public** — property photo (displayed in listings) |
 | GET · POST | `/` | Authenticated (landlord-scoped) |
 | GET | `/details` · `/{id}` · `/{id}/details` | Authenticated |
 | PUT · DELETE | `/{id}` | Authenticated |
+| POST · DELETE | `/{id}/photo` | Authenticated — upload (multipart `file`) / remove the photo |
 
 ### Tenants · Buildings · Landlords · Leases
 
@@ -355,7 +357,8 @@ once the backend is running:
   sent by the client is ignored. A tenant can only reach data attached to their own leases.
 - **CORS** restricted to the declared origins (`APP_CORS_ALLOWED_ORIGINS`).
 - **Deliberately public endpoints**: landing / health check (`/`), authentication (`/api/auth/**`),
-  available properties (`GET /api/properties/available`), global statistics (`GET /api/dashboard`),
+  available properties (`GET /api/properties/available`), property photos
+  (`GET /api/properties/{id}/photo`), global statistics (`GET /api/dashboard`),
   application submission (`POST /api/applications`), Stripe webhook (`POST /api/stripe/webhook`),
   and the API documentation routes listed above.
 
